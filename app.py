@@ -3,15 +3,18 @@
 import os
 import traceback
 from flask import Flask, render_template, request, session, g, jsonify, flash, redirect, url_for
-from dotenv import load_dotenv
-from datetime import datetime, date  # 'date' EKLENDİ
+from datetime import datetime, date
 from functools import lru_cache
 import logging
+
+# Config importu
+from config import get_config
 
 # Eklentileri ve ana Blueprint'leri içe aktar
 from extensions import bcrypt
 from supabase import create_client
 
+# Blueprint importları (Aynen kalıyor)
 from blueprints.auth import auth_bp
 from blueprints.main import main_bp
 from blueprints.admin import admin_bp
@@ -32,65 +35,50 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(na
 
 def create_app():
     """Flask uygulama fabrikası."""
-    load_dotenv()
-
+    
     app = Flask(__name__, template_folder='templates', static_folder='static')
-    app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "varsayilan-cok-guvenli-bir-anahtar")
-    app.config['JSON_AS_ASCII'] = False
+    
+    # --- CONFIG ENTEGRASYONU BAŞLANGICI ---
+    config_obj = get_config()
+    app.config.from_object(config_obj)
+    # --- CONFIG ENTEGRASYONU BİTİŞİ ---
 
-    # === JINJA2 FİLTRELERİ (EKLENDİ) ===
+    # === JINJA2 FİLTRELERİ ===
     @app.template_filter('format_tarih')
     def format_tarih(value, format="%d.%m.%Y"):
-        if value is None:
-            return ""
+        if value is None: return ""
         if isinstance(value, str):
-            try:
-                value = datetime.strptime(value, '%Y-%m-%d')
-            except ValueError:
-                return value
+            try: value = datetime.strptime(value, '%Y-%m-%d')
+            except ValueError: return value
         return value.strftime(format)
 
     @app.template_filter('format_tarih_str')
     def format_tarih_str(value):
-        """String tarihi (YYYY-MM-DD) formatlar"""
         if not value: return ""
         try:
-            # Eğer value zaten datetime objesiyse
-            if isinstance(value, (datetime, date)):
-                return value.strftime('%d.%m.%Y')
-            # String ise
+            if isinstance(value, (datetime, date)): return value.strftime('%d.%m.%Y')
             date_obj = datetime.strptime(value, '%Y-%m-%d') 
             return date_obj.strftime('%d.%m.%Y')
-        except:
-            return value
+        except: return value
 
     @app.template_filter('to_date')
     def to_date(value):
-        """String veya datetime objesini date objesine çevirir"""
         if not value: return None
         if isinstance(value, str):
-            try:
-                return datetime.strptime(value, '%Y-%m-%d').date()
-            except:
-                return None
-        if isinstance(value, datetime):
-            return value.date()
-        if isinstance(value, date):
-            return value
+            try: return datetime.strptime(value, '%Y-%m-%d').date()
+            except: return None
+        if isinstance(value, datetime): return value.date()
+        if isinstance(value, date): return value
         return None
-    # ===================================
 
-    # === HATA AYIKLAMA (500) MODU ===
+    # === HATA AYIKLAMA (500) ===
     @app.errorhandler(500)
     def internal_error(error):
         error_trace = traceback.format_exc()
         logging.error(f"500 Hatası Detayı: {error_trace}")
-        
         return f"""
         <div style="font-family: monospace; background: #fff3cd; color: #856404; padding: 20px; border: 1px solid #ffeeba; margin: 20px;">
             <h2 style="color: #721c24;">Sistem Hatası (500)</h2>
-            <p>Aşağıdaki hata kodunu kopyalayıp geliştiriciye iletin:</p>
-            <hr>
             <pre style="white-space: pre-wrap; background: #f8f9fa; padding: 15px; border: 1px solid #ddd;">{error_trace}</pre>
         </div>
         """, 500
@@ -98,8 +86,9 @@ def create_app():
     @app.before_request
     def setup_supabase_client():
         if 'supabase' not in g:
-            url = os.environ.get("SUPABASE_URL")
-            key = os.environ.get("SUPABASE_KEY")
+            # Config'den alıyoruz
+            url = app.config.get("SUPABASE_URL")
+            key = app.config.get("SUPABASE_KEY")
             try:
                 g.supabase = create_client(url, key)
             except Exception as e:
@@ -127,7 +116,6 @@ def create_app():
                 url_for('auth.login_api'),
                 url_for('auth.logout')
             ]
-            
             if request.path in exempt_paths: return
 
             if request.path.startswith(url_for('auth.register_page')) or request.path.startswith(url_for('auth.register_user_api')):
@@ -138,9 +126,7 @@ def create_app():
 
             if request.path.startswith('/api/'):
                 return jsonify({"error": "Uygulama bakımda."}), 503
-            
             return render_template('maintenance.html'), 503
-    
         except Exception as e:
             logging.warning(f"Bakım modu kontrolü hatası: {e}")
             pass
@@ -148,15 +134,12 @@ def create_app():
     @lru_cache(maxsize=None)
     def get_version_info():
         try:
-            url = os.environ.get("SUPABASE_URL")
-            key = os.environ.get("SUPABASE_KEY")
+            url = app.config.get("SUPABASE_URL")
+            key = app.config.get("SUPABASE_KEY")
             temp_supabase_client = create_client(url, key)
             all_versions_res = temp_supabase_client.table('surum_notlari').select('*').order('yayin_tarihi', desc=True).order('id', desc=True).execute()
-            if not all_versions_res.data:
-                return "1.0.0", []
-            surum_notlari = all_versions_res.data
-            app_version = surum_notlari[0]['surum_no']
-            return app_version, surum_notlari
+            if not all_versions_res.data: return "1.0.0", []
+            return all_versions_res.data[0]['surum_no'], all_versions_res.data
         except Exception as e:
             logging.error(f"Sürüm bilgileri hatası: {e}")
             return "N/A", []
@@ -164,11 +147,11 @@ def create_app():
     @app.context_processor
     def inject_global_vars():
         app_version, surum_notlari = get_version_info()
-        # TODAY DEĞİŞKENİ EKLENDİ
         return {'APP_VERSION': app_version, 'SURUM_NOTLARI': surum_notlari, 'today': date.today()}
     
     bcrypt.init_app(app)
 
+    # Blueprint Register işlemleri (Aynen kalıyor)
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp)
