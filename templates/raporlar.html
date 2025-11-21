@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Detaylı Raporlar - Süt Takip Sistemi</title>
+
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' } }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-full flex flex-col bg-gray-50 font-sans text-gray-900 antialiased pb-20 md:pb-0" data-user-role="{{ session.get('user', {}).get('rol', '') }}">
+
+    <header class="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <a href="{{ url_for('main.panel') }}" class="mr-4 text-gray-500 hover:text-brand-600 transition-colors">
+                        <i class="fa-solid fa-arrow-left text-xl"></i>
+                    </a>
+                    <div class="flex-shrink-0 flex items-center">
+                        <div class="bg-brand-600 text-white p-2 rounded-lg shadow-sm mr-3">
+                            <i class="fa-solid fa-chart-pie text-xl"></i>
+                        </div>
+                        <h1 class="text-lg font-bold text-gray-900 leading-tight">Raporlar</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-3">
+                    {% include '_hizli_islemler.html' %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto bg-gray-50 p-4">
+        <div class="max-w-7xl mx-auto space-y-6 mt-4">
+            
+            <div id="alert-container"></div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <h5 class="font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-filter text-brand-500 mr-2"></i>Rapor Filtrele</h5>
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+                        <div class="sm:col-span-5">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Başlangıç</label>
+                            <input type="text" id="baslangic-tarihi" class="block w-full rounded-lg border-gray-300 border p-2 text-sm shadow-sm focus:ring-brand-500 focus:border-brand-500" placeholder="Seçiniz">
+                        </div>
+                        <div class="sm:col-span-5">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Bitiş</label>
+                            <input type="text" id="bitis-tarihi" class="block w-full rounded-lg border-gray-300 border p-2 text-sm shadow-sm focus:ring-brand-500 focus:border-brand-500" placeholder="Seçiniz">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <button onclick="raporOlustur()" class="w-full bg-brand-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-brand-700 transition-colors shadow-sm">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <h5 class="font-bold text-gray-800 mb-4 flex items-center"><i class="fa-solid fa-file-pdf text-red-500 mr-2"></i>Aylık PDF Özeti</h5>
+                    <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end">
+                        <div class="sm:col-span-5">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Ay</label>
+                            <select id="rapor-ay" class="block w-full rounded-lg border-gray-300 border p-2 text-sm shadow-sm"></select>
+                        </div>
+                        <div class="sm:col-span-5">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Yıl</label>
+                            <select id="rapor-yil" class="block w-full rounded-lg border-gray-300 border p-2 text-sm shadow-sm"></select>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <button id="pdf-indir-btn" onclick="pdfIndir()" class="w-full bg-red-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-red-700 transition-colors shadow-sm">
+                                <i class="fa-solid fa-download"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if session.get('user', {}).get('rol') in ['admin', 'firma_yetkilisi'] %}
+            <div id="karlilik-raporu-container" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hidden">
+                <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                    <h5 class="font-bold text-gray-800">Kârlılık Analizi <span class="text-sm font-normal text-gray-500 ml-2" id="karlilik-tarih-araligi"></span></h5>
+                    <span class="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Finansal Özet</span>
+                </div>
+                <div class="p-5">
+                    <div id="karlilik-sonuc-mesaji" class="hidden text-center py-4 text-gray-500"></div>
+                    
+                    <div id="karlilik-kartlari" class="hidden space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-green-50 rounded-xl p-4 border border-green-100 text-center">
+                                <p class="text-sm text-green-600 font-medium mb-1">Toplam Gelir</p>
+                                <h3 class="text-2xl font-bold text-green-700" id="karlilik-toplam-gelir">- TL</h3>
+                            </div>
+                            <div class="bg-red-50 rounded-xl p-4 border border-red-100 text-center">
+                                <p class="text-sm text-red-600 font-medium mb-1">Toplam Gider</p>
+                                <h3 class="text-2xl font-bold text-red-700" id="karlilik-toplam-gider">- TL</h3>
+                            </div>
+                            <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 text-center">
+                                <p class="text-sm text-blue-600 font-medium mb-1">NET KÂR</p>
+                                <h3 class="text-2xl font-bold text-blue-700" id="karlilik-net-kar">- TL</h3>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <p class="text-xs text-gray-500 mb-1">Süt Geliri</p>
+                                <p class="font-bold text-gray-800" id="karlilik-sut-geliri">-</p>
+                            </div>
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <p class="text-xs text-gray-500 mb-1">Diğer Gelirler</p>
+                                <p class="font-bold text-gray-800" id="karlilik-tahsilat-geliri">-</p>
+                            </div>
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <p class="text-xs text-gray-500 mb-1">Yem Maliyeti</p>
+                                <p class="font-bold text-gray-800" id="karlilik-yem-gideri">-</p>
+                            </div>
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                <p class="text-xs text-gray-500 mb-1">Süt Alım Maliyeti</p>
+                                <p class="font-bold text-gray-800" id="karlilik-finans-gideri">-</p>
+                            </div>
+                            <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 col-span-2 md:col-span-1">
+                                <p class="text-xs text-gray-500 mb-1">Genel Giderler</p>
+                                <p class="font-bold text-gray-800" id="karlilik-genel-masraf">-</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <h5 class="font-bold text-gray-800 mb-4">Son 7 Günlük Süt Toplama</h5>
+                    <div class="relative h-64 w-full">
+                        <canvas id="haftalikRaporGrafigi"></canvas>
+                    </div>
+                </div>
+                
+                <div class="lg:col-span-5 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <div class="flex justify-between items-center mb-4">
+                        <h5 class="font-bold text-gray-800">Tedarikçi Dağılımı</h5>
+                        <div id="tedarikci-filtre-grup" class="flex bg-gray-100 rounded-lg p-1">
+                            <label class="cursor-pointer px-3 py-1 text-xs font-medium rounded-md text-gray-500 hover:bg-white hover:shadow-sm transition-all">
+                                <input type="radio" name="tedarikci-periyot" value="daily" class="hidden peer">
+                                <span class="peer-checked:text-brand-600">Gün</span>
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 text-xs font-medium rounded-md text-gray-500 hover:bg-white hover:shadow-sm transition-all">
+                                <input type="radio" name="tedarikci-periyot" value="weekly" class="hidden peer">
+                                <span class="peer-checked:text-brand-600">Hafta</span>
+                            </label>
+                            <label class="cursor-pointer px-3 py-1 text-xs font-medium rounded-md bg-white text-brand-600 shadow-sm transition-all">
+                                <input type="radio" name="tedarikci-periyot" value="monthly" class="hidden peer" checked>
+                                <span class="peer-checked:text-brand-600">Ay</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="relative h-64 w-full flex items-center justify-center">
+                        <canvas id="tedarikciDagilimGrafigi"></canvas>
+                        <div id="tedarikci-veri-yok" class="hidden absolute inset-0 flex items-center justify-center text-gray-400 text-sm">Veri bulunamadı</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="ozet-kartlari" class="hidden grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
+                    <p class="text-xs text-gray-500 uppercase">Toplam Süt</p>
+                    <h4 class="text-xl font-bold text-brand-600 mt-1" id="ozet-toplam-litre">-</h4>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
+                    <p class="text-xs text-gray-500 uppercase">Günlük Ort.</p>
+                    <h4 class="text-xl font-bold text-gray-800 mt-1" id="ozet-gunluk-ortalama">-</h4>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
+                    <p class="text-xs text-gray-500 uppercase">Girdi Sayısı</p>
+                    <h4 class="text-xl font-bold text-gray-800 mt-1" id="ozet-girdi-sayisi">-</h4>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-center">
+                    <p class="text-xs text-gray-500 uppercase">Gün Sayısı</p>
+                    <h4 class="text-xl font-bold text-gray-800 mt-1" id="ozet-gun-sayisi">-</h4>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-8 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                    <h5 class="font-bold text-gray-800 mb-4" id="grafik-baslik">Tarih Aralığı Seçin</h5>
+                    <div class="relative h-80 w-full">
+                        <canvas id="detayliRaporGrafigi"></canvas>
+                        <p id="rapor-sonuc-mesaji" class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">Lütfen tarih aralığı seçip "Raporla" butonuna basın.</p>
+                    </div>
+                </div>
+                
+                <div class="lg:col-span-4 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50">
+                        <h5 class="font-bold text-gray-800">Tedarikçi Dökümü</h5>
+                    </div>
+                    <div class="overflow-y-auto flex-1 p-0 max-h-96">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Tedarikçi</th>
+                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Litre</th>
+                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Adet</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tedarikci-dokum-tablosu" class="bg-white divide-y divide-gray-100 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/tr.js"></script>
+    
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/chart-manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+    
+    <script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+
+</body>
+</html>

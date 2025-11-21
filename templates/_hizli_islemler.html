@@ -1,0 +1,79 @@
+<div class="relative" id="hizli-islemler-dropdown">
+    <button onclick="toggleDropdown('hizli-islemler-menu')" 
+            class="flex items-center gap-2 bg-brand-600 text-white px-3 py-2 rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
+        <i class="fa-solid fa-bolt"></i> 
+        <span class="hidden sm:inline">Hızlı İşlemler</span> 
+        <i class="fa-solid fa-chevron-down text-xs"></i>
+    </button>
+    
+    <div id="hizli-islemler-menu" class="hidden absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 z-50 origin-top-right divide-y divide-gray-100 focus:outline-none transform transition-all duration-200">
+        
+        <div class="py-1">
+            <a href="{{ url_for('main.panel') }}" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-house mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Ana Panel
+            </a>
+            <a href="{{ url_for('main.tedarikciler_sayfasi') }}" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-users mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Tedarikçiler
+            </a>
+            <a href="{{ url_for('yem.yem_yonetimi_sayfasi') }}" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-wheat-awn mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Yem Yönetimi
+            </a>
+            <a href="{{ url_for('finans.finans_sayfasi') }}" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-wallet mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Finans
+            </a>
+            <a href="{{ url_for('main.raporlar_page') }}" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-chart-pie mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Raporlar
+            </a>
+        </div>
+
+        {% if session.get('user', {}).get('rol') in ['admin', 'firma_yetkilisi'] %}
+        <div class="py-1">
+            <a href="{{ url_for('firma.firma_yonetim_sayfasi') }}" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-id-card mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Kullanıcı Yönetimi
+            </a>
+            <a href="{{ url_for('tarife.tarife_yonetim_sayfasi') }}" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-tags mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Fiyat Tarifesi
+            </a>
+            <a href="{{ url_for('masraf.masraf_yonetim_sayfasi') }}" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-file-invoice-dollar mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Masraflar
+            </a>
+        </div>
+        {% endif %}
+
+        <div class="py-1">
+            <a href="{{ url_for('profil.profil_sayfasi') }}" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-user-circle mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Profilim
+            </a>
+             <a href="#" onclick="toggleModal('aboutModal')" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-circle-info mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Hakkında
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="group flex items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                <i class="fa-solid fa-right-from-bracket mr-3 text-red-400 group-hover:text-red-600 w-5 text-center"></i> Çıkış Yap
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleDropdown(id) {
+        const dropdown = document.getElementById(id);
+        if (dropdown.classList.contains('hidden')) {
+            // Varsa diğer açık menüleri kapat
+            document.querySelectorAll('[id$="-menu"]').forEach(el => el.classList.add('hidden'));
+            dropdown.classList.remove('hidden');
+        } else {
+            dropdown.classList.add('hidden');
+        }
+    }
+
+    // Sayfanın herhangi bir yerine tıklayınca menüyü kapat
+    window.addEventListener('click', function(e) {
+        const dropdowns = document.querySelectorAll('[id$="-dropdown"]');
+        dropdowns.forEach(container => {
+            if (!container.contains(e.target)) {
+                const menu = container.querySelector('[id$="-menu"]');
+                if (menu) menu.classList.add('hidden');
+            }
+        });
+    });
+</script>

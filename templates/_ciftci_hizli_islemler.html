@@ -1,0 +1,27 @@
+<div class="relative" id="ciftci-islemler-dropdown">
+    <button onclick="toggleDropdown('ciftci-islemler-menu')" 
+            class="flex items-center gap-2 bg-brand-600 text-white px-3 py-2 rounded-lg hover:bg-brand-700 transition-colors text-sm font-medium shadow-sm">
+        <i class="fa-solid fa-bolt"></i> 
+        <span class="hidden sm:inline">İşlemler</span> 
+        <i class="fa-solid fa-chevron-down text-xs"></i>
+    </button>
+    
+    <div id="ciftci-islemler-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 z-50 origin-top-right divide-y divide-gray-100">
+        <div class="py-1">
+            <a href="#" onclick="toggleModal('aboutModal')" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-circle-info mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Hakkında
+            </a>
+            <a href="#" onclick="if(typeof askForNotificationPermission === 'function') askForNotificationPermission()" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+                <i class="fa-solid fa-bell mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Bildirimleri Aç
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="group flex items-center px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors">
+                <i class="fa-solid fa-right-from-bracket mr-3 text-red-400 group-hover:text-red-600 w-5 text-center"></i> Güvenli Çıkış
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Aynı toggle scripti _hizli_islemler.html ile çakışmaz çünkü ID'ler farklı veya aynı fonksiyonu kullanabilirler.
+    // Eğer aynı sayfada birden fazla include yoksa sorun olmaz.
+</script>
