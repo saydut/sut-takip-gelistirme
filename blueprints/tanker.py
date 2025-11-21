@@ -11,9 +11,10 @@ tanker_bp = Blueprint('tanker', __name__)
 
 @tanker_bp.route('/tanker', methods=['GET'])
 @login_required
-def tanker_yonetimi_sayfasi(): # İsim düzeltildi (page -> sayfasi)
+def tanker_yonetimi_sayfasi():
     """Tanker yönetimi sayfasını render eder."""
-    return render_template('tanker.tanker_yonetimi_sayfasi') # Düzeltildi: HTML render ediyor
+    # Dosya uzantısı .html olmalı ve dosya adıyla eşleşmeli
+    return render_template('tanker_yonetimi.html')
 
 @tanker_bp.route('/tanker/api/listele', methods=['GET'])
 @login_required

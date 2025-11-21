@@ -4,33 +4,32 @@ let detayliChart = null;
 let baslangicTarihiSecici = null;
 let bitisTarihiSecici = null;
 
-// Tarih formatlama yardımcısı (API için YYYY-MM-DD)
+// Tarih Formatlama (API için)
 function formatDateToYYYYMMDD(date) {
     if (!date) return null;
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-// PDF İndirme İşlemi
+// PDF İndirme
 async function pdfIndir() {
     const ay = document.getElementById('rapor-ay').value;
     const yil = document.getElementById('rapor-yil').value;
     const url = `/api/rapor/aylik_pdf?ay=${ay}&yil=${yil}`;
 
-    // utils.js içindeki indirVeAc fonksiyonunu kullanır
     if (typeof indirVeAc === 'function') {
         await indirVeAc(url, 'pdf-indir-btn', {
             success: 'Rapor başarıyla indirildi.',
             error: 'PDF oluşturulurken bir hata meydana geldi.'
         });
     } else {
-        console.error("utils.js içindeki 'indirVeAc' fonksiyonu bulunamadı.");
-        alert("İndirme fonksiyonu yüklenemedi.");
+        console.error("utils.js yüklenemedi.");
+        alert("İndirme başlatılamadı.");
     }
 }
 
-// Sayfa Yüklendiğinde
+// Sayfa Başlangıcı
 window.onload = function() {
-    // 1. Tarih Seçicileri Başlat (Flatpickr)
+    // 1. Flatpickr Başlatma
     const birAyOnce = new Date();
     birAyOnce.setMonth(birAyOnce.getMonth() - 1);
 
@@ -54,26 +53,23 @@ window.onload = function() {
         });
     }
 
-    // 2. Ay/Yıl Seçicilerini Doldur (utils.js'den)
+    // 2. Ay/Yıl Seçicileri
     if(typeof ayYilSecicileriniDoldur === 'function') {
         ayYilSecicileriniDoldur('rapor-ay', 'rapor-yil');
     }
 
-    // 3. Küçük Grafikleri Başlat (Haftalık ve Tedarikçi Dağılımı)
-    // charts objesi charts.js dosyasından gelir (base.html'de yüklü olmalı)
+    // 3. Küçük Grafikler
     if (typeof charts !== 'undefined') {
         charts.haftalikGrafigiOlustur();
         charts.tedarikciGrafigiOlustur();
-    } else {
-        console.warn("charts objesi bulunamadı. charts.js dosyası yüklenmemiş olabilir.");
     }
 
-    // 4. Tedarikçi Filtre Butonları (Radyo Butonları)
+    // 4. Radyo Buton Dinleyici
     const filters = document.querySelectorAll('input[name="tedarikci-periyot"]');
     filters.forEach(radio => {
         radio.addEventListener('change', (e) => {
-            // Görsel güncelleme (Seçili olanı beyaz yap, diğerlerini gri)
             filters.forEach(r => {
+                // Tailwind sınıflarını değiştir (Toggle Efekti)
                 const label = r.parentElement;
                 if(r.checked) {
                     label.classList.remove('text-gray-500', 'hover:bg-white');
@@ -83,15 +79,13 @@ window.onload = function() {
                     label.classList.remove('bg-white', 'text-brand-600', 'shadow-sm');
                 }
             });
-            // Grafik güncelleme
             if (typeof charts !== 'undefined') charts.tedarikciGrafigiGuncelle(e.target.value);
         });
     });
 
-    // 5. Başlangıçta otomatik rapor oluştur
+    // 5. İlk Raporu Oluştur
     setTimeout(() => { raporOlustur(); }, 100);
 };
-
 
 // --- YARDIMCI FONKSİYONLAR ---
 
@@ -111,16 +105,16 @@ function tedarikciTablosunuDoldur(breakdownData) {
     
     body.innerHTML = '';
     if (!breakdownData || breakdownData.length === 0) {
-        body.innerHTML = '<tr><td colspan="3" class="px-4 py-4 text-center text-gray-400 text-sm">Veri yok.</td></tr>';
+        body.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-gray-400 text-sm">Bu aralıkta veri bulunamadı.</td></tr>';
         return;
     }
     
     breakdownData.forEach(item => {
         body.innerHTML += `
         <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100 last:border-0">
-            <td class="px-4 py-2 text-gray-900 font-medium text-sm">${utils.sanitizeHTML(item.name)}</td>
-            <td class="px-4 py-2 text-right text-gray-600 font-mono text-sm">${parseFloat(item.litre).toFixed(2)}</td>
-            <td class="px-4 py-2 text-right text-gray-500 text-xs">${item.entryCount}</td>
+            <td class="px-4 py-3 text-gray-900 font-medium text-sm">${utils.sanitizeHTML(item.name)}</td>
+            <td class="px-4 py-3 text-right text-gray-600 font-mono text-sm">${parseFloat(item.litre).toFixed(2)}</td>
+            <td class="px-4 py-3 text-right text-gray-500 text-xs">${item.entryCount}</td>
         </tr>`;
     });
 }
@@ -134,7 +128,9 @@ function karlilikKartlariniDoldur(data) {
     const net = document.getElementById('karlilik-net-kar');
     const netVal = parseFloat(data.net_kar || 0);
     net.textContent = fmt(netVal);
-    net.className = 'text-2xl font-bold ' + (netVal > 0 ? 'text-green-700' : (netVal < 0 ? 'text-red-700' : 'text-blue-700'));
+    
+    // Renk sınıflarını temizle ve yenisini ekle
+    net.className = 'text-2xl font-bold tracking-tight ' + (netVal > 0 ? 'text-green-700' : (netVal < 0 ? 'text-red-700' : 'text-blue-700'));
 
     document.getElementById('karlilik-sut-geliri').textContent = fmt(data.sut_geliri); 
     document.getElementById('karlilik-tahsilat-geliri').textContent = fmt(data.diger_gelirler);
@@ -143,12 +139,10 @@ function karlilikKartlariniDoldur(data) {
     document.getElementById('karlilik-genel-masraf').textContent = fmt(data.diger_giderler);
 }
 
-
-// --- RAPOR OLUŞTURMA FONKSİYONLARI ---
+// --- RAPORLAMA MANTIĞI ---
 
 async function karlilikRaporuOlustur(baslangic, bitis) {
     const role = document.body.dataset.userRole;
-    // Sadece yetkili roller
     if (role !== 'admin' && role !== 'firma_yetkilisi') return;
 
     const container = document.getElementById('karlilik-raporu-container');
@@ -161,9 +155,8 @@ async function karlilikRaporuOlustur(baslangic, bitis) {
     container.classList.remove('hidden');
     cards.classList.add('hidden');
     msg.classList.remove('hidden');
-    msg.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-brand-500 mr-2"></i> Kârlılık hesaplanıyor...';
+    msg.innerHTML = '<div class="flex justify-center items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i><span>Hesaplanıyor...</span></div>';
 
-    // Tarih bilgisini güncelle
     if (baslangicTarihiSecici && baslangicTarihiSecici.selectedDates[0]) {
         const basStr = baslangicTarihiSecici.selectedDates[0].toLocaleDateString('tr-TR');
         const bitStr = bitisTarihiSecici.selectedDates[0].toLocaleDateString('tr-TR');
@@ -179,8 +172,7 @@ async function karlilikRaporuOlustur(baslangic, bitis) {
         msg.classList.add('hidden');
         cards.classList.remove('hidden');
     } catch (e) {
-        msg.textContent = "Hata: " + e.message;
-        // Hata olsa bile container'ı açık tut ki kullanıcı hatayı görsün
+        msg.innerHTML = `<span class="text-red-500">Hata: ${e.message}</span>`;
     }
 }
 
@@ -196,11 +188,9 @@ async function sutRaporuOlustur(baslangic, bitis) {
     document.getElementById('tedarikci-dokum-tablosu').innerHTML = '';
     
     msg.classList.remove('hidden');
-    msg.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin text-brand-500 mr-2"></i> Süt raporu hazırlanıyor...';
+    msg.innerHTML = '<div class="flex justify-center items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i><span>Yükleniyor...</span></div>';
     
-    // Varsa eski grafiği temizle
     if (detayliChart) {
-        // chart-manager.js içindeki unregister fonksiyonunu kullan (varsa)
         if(typeof unregisterChart === 'function') unregisterChart(detayliChart);
         detayliChart.destroy();
         detayliChart = null;
@@ -228,7 +218,6 @@ async function sutRaporuOlustur(baslangic, bitis) {
         ozetVerileriniDoldur(veri.summaryData);
         tedarikciTablosunuDoldur(veri.supplierBreakdown);
 
-        // Grafiği Oluştur
         detayliChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -238,7 +227,7 @@ async function sutRaporuOlustur(baslangic, bitis) {
                     data: veri.chartData.data,
                     fill: true,
                     tension: 0.3,
-                    borderColor: '#0284c7', // brand-600
+                    borderColor: '#0284c7', // Tailwind brand-600
                     backgroundColor: 'rgba(2, 132, 199, 0.1)',
                     pointBackgroundColor: '#ffffff',
                     pointBorderColor: '#0284c7',
@@ -249,44 +238,40 @@ async function sutRaporuOlustur(baslangic, bitis) {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: false, // Mobil uyum için kritik
                 plugins: { 
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 10,
+                        backgroundColor: 'rgba(17, 24, 39, 0.9)', // gray-900
+                        padding: 12,
                         cornerRadius: 8,
                         callbacks: {
-                            label: function(context) {
-                                return ` ${context.parsed.y} Litre`;
-                            }
+                            label: (ctx) => ` ${ctx.parsed.y} Litre`
                         }
                     }
                 },
                 scales: { 
                     y: { 
                         beginAtZero: true, 
-                        grid: { color: '#f3f4f6', borderDash: [5, 5] },
-                        ticks: { font: { size: 11 } }
+                        grid: { color: '#f3f4f6', borderDash: [4, 4] }, // gray-100
+                        ticks: { font: { size: 11, family: "'Inter', sans-serif" } }
                     }, 
                     x: { 
                         grid: { display: false },
-                        ticks: { font: { size: 11 } }
+                        ticks: { font: { size: 11, family: "'Inter', sans-serif" } }
                     } 
                 }
             }
         });
         
-        // Tema yönetimi için grafiği kaydet
         if(typeof registerChart === 'function') registerChart(detayliChart);
 
     } catch (error) {
         console.error(error);
-        msg.textContent = "Rapor oluşturulurken bir hata meydana geldi.";
+        msg.textContent = "Hata oluştu.";
     }
 }
 
-// Ana Tetikleyici
 async function raporOlustur() {
     if (!baslangicTarihiSecici || !bitisTarihiSecici) return;
 
@@ -300,11 +285,10 @@ async function raporOlustur() {
         return;
     }
     if (!navigator.onLine) {
-        if(typeof gosterMesaj === 'function') gosterMesaj("Rapor oluşturmak için internet bağlantısı gereklidir.", "warning");
+        if(typeof gosterMesaj === 'function') gosterMesaj("İnternet bağlantısı gereklidir.", "warning");
         return;
     }
 
-    // İki raporu paralel çalıştır
     await Promise.allSettled([
         sutRaporuOlustur(bas, bit),
         karlilikRaporuOlustur(bas, bit)

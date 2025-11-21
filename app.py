@@ -1,10 +1,10 @@
 # app.py
 
 import os
-import traceback  # Hatayı detaylı görmek için gerekli
+import traceback
 from flask import Flask, render_template, request, session, g, jsonify, flash, redirect, url_for
 from dotenv import load_dotenv
-from datetime import datetime
+from datetime import datetime, date  # 'date' EKLENDİ
 from functools import lru_cache
 import logging
 
@@ -38,8 +38,49 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY", "varsayilan-cok-guvenli-bir-anahtar")
     app.config['JSON_AS_ASCII'] = False
 
+    # === JINJA2 FİLTRELERİ (EKLENDİ) ===
+    @app.template_filter('format_tarih')
+    def format_tarih(value, format="%d.%m.%Y"):
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            try:
+                value = datetime.strptime(value, '%Y-%m-%d')
+            except ValueError:
+                return value
+        return value.strftime(format)
+
+    @app.template_filter('format_tarih_str')
+    def format_tarih_str(value):
+        """String tarihi (YYYY-MM-DD) formatlar"""
+        if not value: return ""
+        try:
+            # Eğer value zaten datetime objesiyse
+            if isinstance(value, (datetime, date)):
+                return value.strftime('%d.%m.%Y')
+            # String ise
+            date_obj = datetime.strptime(value, '%Y-%m-%d') 
+            return date_obj.strftime('%d.%m.%Y')
+        except:
+            return value
+
+    @app.template_filter('to_date')
+    def to_date(value):
+        """String veya datetime objesini date objesine çevirir"""
+        if not value: return None
+        if isinstance(value, str):
+            try:
+                return datetime.strptime(value, '%Y-%m-%d').date()
+            except:
+                return None
+        if isinstance(value, datetime):
+            return value.date()
+        if isinstance(value, date):
+            return value
+        return None
+    # ===================================
+
     # === HATA AYIKLAMA (500) MODU ===
-    # Bu blok, 'Internal Server Error' hatasının nedenini ekrana basar.
     @app.errorhandler(500)
     def internal_error(error):
         error_trace = traceback.format_exc()
@@ -53,48 +94,33 @@ def create_app():
             <pre style="white-space: pre-wrap; background: #f8f9fa; padding: 15px; border: 1px solid #ddd;">{error_trace}</pre>
         </div>
         """, 500
-    # =================================
 
     @app.before_request
     def setup_supabase_client():
         if 'supabase' not in g:
             url = os.environ.get("SUPABASE_URL")
             key = os.environ.get("SUPABASE_KEY")
-            # Hata durumunda boş client oluşturmayı dene veya logla
             try:
                 g.supabase = create_client(url, key)
             except Exception as e:
                 logging.error(f"Supabase bağlantı hatası: {e}")
-                # Burada hata fırlatmıyoruz, view içinde patlarsa errorhandler yakalayacak
 
     @app.before_request
     def check_for_maintenance():
-        # 1. Statik dosyaları her zaman istisna tut
-        if request.path.startswith('/static'):
-            return
-
+        if request.path.startswith('/static'): return
         try:
-            # 2. Bakım modu durumunu veritabanından çek
             if 'maintenance_mode' not in g:
-                # Supabase bağlantısı yoksa varsayılan False olsun
                 if hasattr(g, 'supabase'):
                     response = g.supabase.table('ayarlar').select('ayar_degeri').eq('ayar_adi', 'maintenance_mode').single().execute()
                     g.maintenance_mode = response.data.get('ayar_degeri', 'false') == 'true' if response.data else False
                 else:
                     g.maintenance_mode = False
 
-            # 3. Bakım modu AÇIK DEĞİLSE, devam et
-            if not g.maintenance_mode:
-                return
+            if not g.maintenance_mode: return
 
-            # 4. Bakım modu AÇIKSA:
             user_rol = session.get('user', {}).get('rol')
+            if user_rol == 'admin': return 
 
-            # Admin ise geç
-            if user_rol == 'admin':
-                return 
-
-            # İzin verilen yollar
             exempt_paths = [
                 url_for('main.landing_page'),
                 url_for('auth.login_page'),
@@ -102,8 +128,7 @@ def create_app():
                 url_for('auth.logout')
             ]
             
-            if request.path in exempt_paths:
-                return
+            if request.path in exempt_paths: return
 
             if request.path.startswith(url_for('auth.register_page')) or request.path.startswith(url_for('auth.register_user_api')):
                 flash("Uygulama şu anda bakımda. Yeni kayıt oluşturulamaz.", "warning")
@@ -139,12 +164,11 @@ def create_app():
     @app.context_processor
     def inject_global_vars():
         app_version, surum_notlari = get_version_info()
-        return {'APP_VERSION': app_version, 'SURUM_NOTLARI': surum_notlari}
+        # TODAY DEĞİŞKENİ EKLENDİ
+        return {'APP_VERSION': app_version, 'SURUM_NOTLARI': surum_notlari, 'today': date.today()}
     
-    # Eklentileri başlat
     bcrypt.init_app(app)
 
-    # Blueprint'leri kaydet
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(admin_bp)
