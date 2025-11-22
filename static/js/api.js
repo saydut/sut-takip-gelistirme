@@ -1,4 +1,4 @@
-// static/js/api.js - CACHE BUSTING EKLENDİ
+// static/js/api.js - EKSİK FONKSİYONLAR EKLENDİ
 
 const api = {
     async request(url, options = {}) {
@@ -36,16 +36,16 @@ const api = {
     deleteSutGirdisi(id) { return this.request(`/api/sut_girdisi_sil/${id}`, { method: 'DELETE' }); },
     fetchGirdiGecmisi(id) { return this.request(`/api/girdi_gecmisi/${id}?_t=${Date.now()}`); },
 
-    // --- Tarife (CACHE SORUNU BURADA ÇÖZÜLDÜ) ---
-    fetchTarifeler() { return this.request(`/tarife/api/listele?_t=${Date.now()}`); }, // Timestamp Eklendi
+    // --- Tarife ---
+    fetchTarifeler() { return this.request(`/tarife/api/listele?_t=${Date.now()}`); }, 
     postTarife(v) { return this.request('/tarife/api/ekle', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(v) }); },
     updateTarife(id, v) { return this.request(`/tarife/api/guncelle/${id}`, { method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(v) }); },
     deleteTarife(id) { return this.request(`/tarife/api/sil/${id}`, { method: 'DELETE' }); },
     fetchTarifeFiyat(tarih) { return this.request(`/tarife/api/get_fiyat?tarih=${tarih}&_t=${Date.now()}`); },
 
-    // --- Masraf (CACHE SORUNU BURADA ÇÖZÜLDÜ) ---
+    // --- Masraf ---
     fetchMasrafKategorileri() { return this.request(`/masraf/api/kategori/listele?_t=${Date.now()}`); },
-    fetchMasraflar(p, l) { return this.request(`/masraf/api/listele?sayfa=${p}&limit=${l}&_t=${Date.now()}`); }, // Timestamp Eklendi
+    fetchMasraflar(p, l) { return this.request(`/masraf/api/listele?sayfa=${p}&limit=${l}&_t=${Date.now()}`); }, 
     postMasraf(v) { return this.request('/masraf/api/ekle', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(v) }); },
     deleteMasraf(id) { return this.request(`/masraf/api/sil/${id}`, { method: 'DELETE' }); },
     postMasrafKategorisi(v) { return this.request('/masraf/api/kategori/ekle', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(v) }); },
@@ -89,6 +89,15 @@ const api = {
     postKullaniciSifreSetle(id, v) { return this.request(`/firma/api/kullanici_sifre_setle/${id}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(v) }); },
 
     // --- Rapor & Diğer ---
+    // EKSİK OLAN FONKSİYONLAR EKLENDİ:
+    fetchHaftalikOzet() { 
+        return this.request(`/api/rapor/haftalik_ozet?_t=${Date.now()}`); 
+    },
+    fetchTedarikciDagilimi(period) { 
+        const p = period ? period : 'monthly';
+        return this.request(`/api/rapor/tedarikci_dagilimi?period=${p}&_t=${Date.now()}`); 
+    },
+
     fetchDetayliRapor(b, e) { return this.request(`/api/rapor/detayli_rapor?baslangic=${b}&bitis=${e}&_t=${Date.now()}`); },
     fetchKarlilikRaporu(b, e) { return this.request(`/api/rapor/karlilik?baslangic=${b}&bitis=${e}&_t=${Date.now()}`); },
     fetchProfil() { return this.request('/api/profil'); },

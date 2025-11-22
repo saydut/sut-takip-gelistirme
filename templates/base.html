@@ -65,7 +65,8 @@
 
     {% if session.get('user') and session.get('user', {}).get('rol') != 'ciftci' %}
     <nav class="fixed bottom-0 left-0 z-[9999] w-full h-16 bg-white border-t border-gray-200 block md:hidden pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
-        <div class="grid h-full grid-cols-5 mx-auto font-medium"> <a href="{{ url_for('main.panel') }}" class="bottom-nav-link inline-flex flex-col items-center justify-center px-2 hover:bg-gray-50 group text-gray-500 transition-colors" data-page="panel">
+        <div class="grid h-full grid-cols-5 mx-auto font-medium">
+            <a href="{{ url_for('main.panel') }}" class="bottom-nav-link inline-flex flex-col items-center justify-center px-2 hover:bg-gray-50 group text-gray-500 transition-colors" data-page="panel">
                 <i class="fa-solid fa-house text-xl mb-1 group-[.active]:text-brand-600"></i>
                 <span class="text-[10px] group-[.active]:text-brand-600">Panel</span>
             </a>
@@ -241,34 +242,35 @@
     <script>
         // --- Temel Yardımcı Fonksiyonlar ---
 
-        // Modal Aç/Kapa
+        // Modal Aç/Kapa - Bu fonksiyon globaldir ve tüm sayfalar bunu kullanır
         function toggleModal(modalId, show) {
             const modal = document.getElementById(modalId);
             if (modal) {
                 if (show) modal.classList.remove('hidden');
                 else modal.classList.add('hidden');
+            } else {
+                console.error("Modal bulunamadı: " + modalId);
             }
         }
 
         // Tab Değiştirme (Basit JS)
         function switchTab(tabName) {
-            // Tüm içerikleri gizle
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            // Seçilen içeriği göster
-            document.getElementById('tab-content-' + tabName).classList.remove('hidden');
+            const target = document.getElementById('tab-content-' + tabName);
+            if(target) target.classList.remove('hidden');
 
-            // Tüm butonların aktifliğini kaldır
             document.querySelectorAll('.tab-btn').forEach(el => {
                 el.classList.remove('border-brand-500', 'text-brand-600');
                 el.classList.add('border-transparent', 'text-gray-500');
             });
-            // Seçilen butonu aktif yap
             const activeBtn = document.getElementById('tab-btn-' + tabName);
-            activeBtn.classList.remove('border-transparent', 'text-gray-500');
-            activeBtn.classList.add('border-brand-500', 'text-brand-600');
+            if(activeBtn) {
+                activeBtn.classList.remove('border-transparent', 'text-gray-500');
+                activeBtn.classList.add('border-brand-500', 'text-brand-600');
+            }
         }
 
-        // Bootstrap Shim (Eski JS kodlarının patlamaması için)
+        // Bootstrap Shim
         if (typeof bootstrap === 'undefined') {
             window.bootstrap = {
                 Modal: class {
@@ -282,15 +284,18 @@
     </script>
 
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
+    
     <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('static', filename='js/render-utils.js') }}"></script>
+    
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
 
     {% if session.get('user') %}
-        <script src="{{ url_for('static', filename='js/modal_handler.js') }}"></script>
         <script src="{{ url_for('static', filename='js/store.js') }}"></script>
         <script src="{{ url_for('static', filename='js/data-loader.js') }}"></script>
+        
+        <script src="{{ url_for('static', filename='js/modal_handler.js') }}"></script>
         <script src="{{ url_for('static', filename='js/chart-manager.js') }}"></script>
         <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
         
@@ -306,7 +311,7 @@
         {% endif %}
 
         <script>
-            // Navigasyon Aktiflik Kontrolü (Tailwind)
+            // Navigasyon Aktiflik Kontrolü
             document.addEventListener('DOMContentLoaded', () => {
                 const currentPage = window.location.pathname;
                 const navLinks = document.querySelectorAll('.bottom-nav-link');
@@ -314,7 +319,6 @@
                 navLinks.forEach(link => {
                     const pageName = link.dataset.page;
                     let isActive = false;
-
                     if (pageName === 'panel' && currentPage === '/panel') isActive = true;
                     else if (pageName === 'tedarikciler' && (currentPage.startsWith('/tedarikciler') || currentPage.startsWith('/tedarikci/'))) isActive = true;
                     else if (pageName === 'raporlar' && currentPage.startsWith('/raporlar')) isActive = true;
@@ -322,20 +326,15 @@
                     else if (pageName === 'finans' && currentPage.startsWith('/finans')) isActive = true;
                     else if (pageName === 'profil' && currentPage.startsWith('/profil')) isActive = true;
 
-                    if (isActive) { 
-                        link.classList.add('active'); // Tailwind group-[.active] ile stil alır
-                    }
+                    if (isActive) link.classList.add('active');
                 });
-                
-                // İlk Tab'ı Aktif Et (Hakkında Modalı için)
                 switchTab('ozellikler');
             });
 
-            // Service Worker Kaydı
+            // Service Worker
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
-                    navigator.serviceWorker.register("/service-worker.js")
-                        .catch(err => console.log('SW Hata:', err));
+                    navigator.serviceWorker.register("/service-worker.js").catch(err => console.log('SW Hata:', err));
                 });
             }
         </script>

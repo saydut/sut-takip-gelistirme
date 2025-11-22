@@ -1,182 +1,159 @@
-<!DOCTYPE html>
-<html lang="tr" class="h-full bg-gray-50">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Yem Yönetimi</title>
+{% extends "base.html" %}
 
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
+{% block title %}Yem Yönetimi - Süt Takip Sistemi{% endblock %}
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' } }
-                }
-            }
-        }
-    </script>
-    <style>
-        .ts-control { border-radius: 0.5rem !important; padding: 0.5rem !important; border-color: #d1d5db !important; }
-        .ts-dropdown { border-radius: 0.5rem !important; border-color: #d1d5db !important; }
-        .hidden { display: none !important; }
-    </style>
-</head>
-<body class="h-full flex flex-col bg-gray-50 font-sans text-gray-900 antialiased pb-20 md:pb-0">
+{% block head_extra %}
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
+<style>
+    .ts-control { border-radius: 0.5rem !important; padding: 0.5rem !important; border-color: #d1d5db !important; }
+    .ts-dropdown { border-radius: 0.5rem !important; border-color: #d1d5db !important; }
+    .hidden { display: none !important; }
+</style>
+{% endblock %}
 
-    <header class="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between h-16">
-                <div class="flex items-center">
-                    <a href="{{ url_for('main.panel') }}" class="mr-4 text-gray-500 hover:text-brand-600 transition-colors"><i class="fa-solid fa-arrow-left text-xl"></i></a>
-                    <div class="flex-shrink-0 flex items-center">
-                        <div class="bg-brand-600 text-white p-2 rounded-lg shadow-sm mr-3"><i class="fa-solid fa-wheat-awn text-xl"></i></div>
-                        <h1 class="text-lg font-bold text-gray-900">Yem Yönetimi</h1>
-                    </div>
+{% block content %}
+<header class="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center">
+                <a href="{{ url_for('main.panel') }}" class="mr-4 text-gray-500 hover:text-brand-600 transition-colors"><i class="fa-solid fa-arrow-left text-xl"></i></a>
+                <div class="flex-shrink-0 flex items-center">
+                    <div class="bg-brand-600 text-white p-2 rounded-lg shadow-sm mr-3"><i class="fa-solid fa-wheat-awn text-xl"></i></div>
+                    <h1 class="text-lg font-bold text-gray-900">Yem Yönetimi</h1>
                 </div>
-                <div class="flex items-center space-x-3">
-                    {% include '_hizli_islemler.html' %}
-                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                {% include '_hizli_islemler.html' %}
             </div>
         </div>
-    </header>
+    </div>
+</header>
 
-    <main class="flex-1 overflow-y-auto bg-gray-50 p-4">
-        <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4">
-            
-            <div id="alert-container" class="lg:col-span-12"></div>
+<main class="flex-1 overflow-y-auto bg-gray-50 p-4">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4">
+        
+        <div id="alert-container" class="lg:col-span-12"></div>
 
-            <div class="lg:col-span-4 order-1">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="flex border-b border-gray-200">
-                        <button onclick="switchFormTab('giris')" id="tab-btn-giris" class="flex-1 py-3 text-sm font-medium text-center border-b-2 border-green-500 text-green-700 bg-green-50 transition-colors">Giriş (Alış)</button>
-                        <button onclick="switchFormTab('cikis')" id="tab-btn-cikis" class="flex-1 py-3 text-sm font-medium text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors">Çıkış (Satış)</button>
-                    </div>
-
-                    <div id="giris-panel" class="p-5">
-                        <h3 class="text-sm font-bold text-green-700 mb-4 uppercase tracking-wide">Stok Girişi</h3>
-                        <form id="yem-giris-formu" class="space-y-4">
-                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Yem Ürünü</label><select id="yem-urun-giris-sec" class="w-full" required></select></div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Miktar (KG)</label><input type="number" step="0.1" id="giris-miktar-kg-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm" required></div>
-                                <div id="cuval-giris-alani" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-1">Miktar (Çuval)</label><input type="number" step="1" id="giris-miktar-cuval-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm"></div>
-                            </div>
-                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Birim Alış Fiyatı</label><input type="number" step="0.01" id="giris-alis-fiyati-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm" required><p id="giris-fiyat-uyari" class="mt-1 text-xs text-gray-500"></p></div>
-                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Açıklama</label><textarea id="giris-aciklama-input" rows="2" class="block w-full rounded-lg border-gray-300 border p-2 text-sm"></textarea></div>
-                            <button type="submit" id="yem-giris-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors">Kaydet</button>
-                        </form>
-                    </div>
-
-                    <div id="cikis-panel" class="p-5 hidden">
-                        <div class="space-y-4">
-                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Tedarikçi</label><select id="tedarikci-sec" class="w-full"></select></div>
-                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Yem Ürünü</label><select id="yem-urun-sec" class="w-full"></select></div>
-                            <div class="grid grid-cols-2 gap-3">
-                                <div><label class="block text-sm font-medium text-gray-700 mb-1">Miktar (KG)</label><input type="number" step="0.1" id="miktar-kg-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm" placeholder="0.0"></div>
-                                <div id="cuval-cikis-alani" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-1">Miktar (Çuval)</label><input type="number" step="0.5" id="miktar-cuval-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm" placeholder="0.0"></div>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 flex gap-4">
-                                <label class="inline-flex items-center cursor-pointer"><input type="radio" name="fiyatTipiRadio" value="pesin" checked class="text-red-600 focus:ring-red-500 border-gray-300"><span class="ml-2 text-sm">Peşin</span></label>
-                                <label class="inline-flex items-center cursor-pointer"><input type="radio" name="fiyatTipiRadio" value="vadeli" class="text-red-600 focus:ring-red-500 border-gray-300"><span class="ml-2 text-sm">Vadeli</span></label>
-                            </div>
-                            <div id="vadeli-fiyat-alani" class="hidden space-y-3">
-                                <div id="vadeli-cuval-fiyat-grup" class="hidden"><label class="block text-sm">Vadeli (TL/Çuval)</label><input type="number" step="0.01" id="vadeli-cuval-fiyat-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm"></div>
-                                <div id="vadeli-kg-fiyat-grup" class="hidden"><label class="block text-sm">Vadeli (TL/KG)</label><input type="number" step="0.01" id="birim-fiyat-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm"></div>
-                            </div>
-                            <div id="pesin-fiyat-alani"><label class="block text-sm">Birim Fiyat (TL/KG)</label><input type="number" step="0.01" id="birim-fiyat-input-pesin" class="block w-full rounded-lg border-gray-300 border p-2 text-sm bg-gray-100 cursor-not-allowed" disabled></div>
-                            <div><label class="block text-sm">Açıklama</label><textarea id="aciklama-input" rows="2" class="block w-full rounded-lg border-gray-300 border p-2 text-sm"></textarea></div>
-                            <button onclick="yemCikisiYap()" id="yem-cikis-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">Çıkışı Kaydet</button>
-                        </div>
-                    </div>
+        <div class="lg:col-span-4 order-1">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="flex border-b border-gray-200">
+                    <button onclick="switchFormTab('giris')" id="tab-btn-giris" class="flex-1 py-3 text-sm font-medium text-center border-b-2 border-green-500 text-green-700 bg-green-50 transition-colors">Giriş (Alış)</button>
+                    <button onclick="switchFormTab('cikis')" id="tab-btn-cikis" class="flex-1 py-3 text-sm font-medium text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors">Çıkış (Satış)</button>
                 </div>
-            </div>
 
-            <div class="lg:col-span-8 order-2">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[600px]">
-                    <div class="px-4 py-3 border-b border-gray-200 flex flex-wrap justify-between items-center gap-3 bg-gray-50">
-                        <div class="flex space-x-2">
-                            <button onclick="switchListTab('stoklar')" id="tab-list-stoklar" class="px-3 py-1.5 rounded-md text-sm font-medium bg-white text-brand-600 shadow-sm ring-1 ring-gray-200 transition-all">Stoklar</button>
-                            <button onclick="switchListTab('islemler')" id="tab-list-islemler" class="px-3 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white transition-all">Hareketler</button>
+                <div id="giris-panel" class="p-5">
+                    <h3 class="text-sm font-bold text-green-700 mb-4 uppercase tracking-wide">Stok Girişi</h3>
+                    <form id="yem-giris-formu" class="space-y-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Yem Ürünü</label><select id="yem-urun-giris-sec" class="w-full" required></select></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Miktar (KG)</label><input type="number" step="0.1" id="giris-miktar-kg-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm" required></div>
+                            <div id="cuval-giris-alani" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-1">Miktar (Çuval)</label><input type="number" step="1" id="giris-miktar-cuval-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm"></div>
                         </div>
-                        
-                        <div class="flex items-center gap-2">
-                            <div class="flex bg-gray-200 rounded-lg p-1">
-                                <button id="btn-view-table" onclick="gorunumuDegistir('tablo')" class="p-1.5 rounded text-gray-500 hover:text-brand-600 active:bg-white active:shadow-sm"><i class="fa-solid fa-list"></i></button>
-                                <button id="btn-view-card" onclick="gorunumuDegistir('kart')" class="p-1.5 rounded text-gray-500 hover:text-brand-600 active:bg-white active:shadow-sm"><i class="fa-solid fa-grip"></i></button>
-                            </div>
-                            {% if session.get('user', {}).get('rol') != 'muhasebeci' %}
-                            <button onclick="yeniYemModaliniAc()" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700 transition-colors"><i class="fa-solid fa-plus mr-1"></i> Ürün Ekle</button>
-                            {% endif %}
-                        </div>
-                    </div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Birim Alış Fiyatı</label><input type="number" step="0.01" id="giris-alis-fiyati-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm" required><p id="giris-fiyat-uyari" class="mt-1 text-xs text-gray-500"></p></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Açıklama</label><textarea id="giris-aciklama-input" rows="2" class="block w-full rounded-lg border-gray-300 border p-2 text-sm"></textarea></div>
+                        <button type="submit" id="yem-giris-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition-colors">Kaydet</button>
+                    </form>
+                </div>
 
-                    <div id="panel-stoklar" class="p-4">
-                        <div id="tablo-gorunumu" class="overflow-x-auto hidden">
-                            <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Yem Adı</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Stok</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Alış</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Satış</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">İşlem</th></tr></thead><tbody id="yem-urunleri-tablosu" class="bg-white divide-y divide-gray-200 text-sm"></tbody></table>
+                <div id="cikis-panel" class="p-5 hidden">
+                    <div class="space-y-4">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Tedarikçi</label><select id="tedarikci-sec" class="w-full"></select></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Yem Ürünü</label><select id="yem-urun-sec" class="w-full"></select></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div><label class="block text-sm font-medium text-gray-700 mb-1">Miktar (KG)</label><input type="number" step="0.1" id="miktar-kg-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm" placeholder="0.0"></div>
+                            <div id="cuval-cikis-alani" class="hidden"><label class="block text-sm font-medium text-gray-700 mb-1">Miktar (Çuval)</label><input type="number" step="0.5" id="miktar-cuval-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm" placeholder="0.0"></div>
                         </div>
-                        <div id="kart-gorunumu" class="hidden"><div id="yem-urunleri-kart-listesi" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div></div>
-                        <div id="veri-yok-mesaji" class="hidden text-center py-10 text-gray-400">Kayıtlı ürün yok.</div>
-                        <nav id="yem-urunleri-sayfalama" class="flex justify-center mt-4"></nav>
-                    </div>
-
-                    <div id="panel-islemler" class="hidden p-4">
-                        <div class="flex justify-end mb-3">
-                            <div class="flex bg-gray-100 rounded-lg p-1">
-                                <button id="btn-islemler-liste" onclick="gorunumuDegistirIslemler('tablo')" class="p-1.5 rounded text-brand-600 bg-white shadow-sm"><i class="fa-solid fa-list"></i></button>
-                                <button id="btn-islemler-kart" onclick="gorunumuDegistirIslemler('kart')" class="p-1.5 rounded text-gray-500 hover:text-brand-600"><i class="fa-solid fa-grip"></i></button>
-                            </div>
+                        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 flex gap-4">
+                            <label class="inline-flex items-center cursor-pointer"><input type="radio" name="fiyatTipiRadio" value="pesin" checked class="text-red-600 focus:ring-red-500 border-gray-300"><span class="ml-2 text-sm">Peşin</span></label>
+                            <label class="inline-flex items-center cursor-pointer"><input type="radio" name="fiyatTipiRadio" value="vadeli" class="text-red-600 focus:ring-red-500 border-gray-300"><span class="ml-2 text-sm">Vadeli</span></label>
                         </div>
-                        <div id="islemler-tablo-gorunumu" class="overflow-x-auto hidden">
-                            <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tedarikçi</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ürün</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Miktar</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">İşlem</th></tr></thead><tbody id="yem-islemleri-listesi" class="bg-white divide-y divide-gray-200 text-sm"></tbody></table>
+                        <div id="vadeli-fiyat-alani" class="hidden space-y-3">
+                            <div id="vadeli-cuval-fiyat-grup" class="hidden"><label class="block text-sm">Vadeli (TL/Çuval)</label><input type="number" step="0.01" id="vadeli-cuval-fiyat-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm"></div>
+                            <div id="vadeli-kg-fiyat-grup" class="hidden"><label class="block text-sm">Vadeli (TL/KG)</label><input type="number" step="0.01" id="birim-fiyat-input" class="block w-full rounded-lg border-gray-300 border p-2 text-sm"></div>
                         </div>
-                        <div id="islemler-kart-gorunumu" class="hidden"><div id="yem-islemleri-kart-listesi" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div></div>
-                        <div id="yem-islemleri-veri-yok" class="hidden text-center py-10 text-gray-400">İşlem yok.</div>
-                        <nav id="yem-islemleri-sayfalama" class="flex justify-center mt-4"></nav>
+                        <div id="pesin-fiyat-alani"><label class="block text-sm">Birim Fiyat (TL/KG)</label><input type="number" step="0.01" id="birim-fiyat-input-pesin" class="block w-full rounded-lg border-gray-300 border p-2 text-sm bg-gray-100 cursor-not-allowed" disabled></div>
+                        <div><label class="block text-sm">Açıklama</label><textarea id="aciklama-input" rows="2" class="block w-full rounded-lg border-gray-300 border p-2 text-sm"></textarea></div>
+                        <button onclick="yemCikisiYap()" id="yem-cikis-btn" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors">Çıkışı Kaydet</button>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
 
-    <div id="yemUrunuModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('yemUrunuModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-md"><div class="bg-white px-4 pb-4 pt-5 border-b border-gray-100"><h3 class="text-lg font-semibold" id="yemUrunuModalLabel">Yeni Yem</h3></div><div class="px-4 py-5"><form id="yem-urun-form" class="space-y-3"><input type="hidden" id="edit-yem-id"><div><label class="block text-sm font-medium text-gray-700">Adı</label><input type="text" id="yem-adi-input" class="block w-full rounded-md border-gray-300 border p-2 text-sm"></div><div><label class="block text-sm font-medium text-gray-700">Tip</label><select id="fiyatlandirma-tipi-sec" class="block w-full rounded-md border-gray-300 border p-2 text-sm"><option value="kg">KG</option><option value="cuval">Çuval</option></select></div><div><label class="block text-sm font-medium text-gray-700" id="yem-stok-label">Stok</label><input type="number" id="yem-stok-input" class="block w-full rounded-md border-gray-300 border p-2 text-sm"></div><div id="kg-fiyat-alani" class="grid grid-cols-2 gap-2"><div><label class="text-xs">Alış</label><input type="number" step="0.01" id="yem-fiyat-input" class="block w-full rounded-md border p-2 text-sm"></div><div><label class="text-xs">Satış</label><input type="number" step="0.01" id="yem-satis-fiyat-input" class="block w-full rounded-md border p-2 text-sm"></div></div><div id="cuval-fiyat-alani" class="hidden space-y-2"><div><label class="text-xs">Çuval KG</label><input type="number" step="0.5" id="cuval-agirlik-input" class="block w-full rounded-md border p-2 text-sm"></div><div class="grid grid-cols-2 gap-2"><div><label class="text-xs">Alış</label><input type="number" step="0.01" id="cuval-fiyat-input" class="block w-full rounded-md border p-2 text-sm"></div><div><label class="text-xs">Satış</label><input type="number" step="0.01" id="yem-satis-cuval-fiyat-input" class="block w-full rounded-md border p-2 text-sm"></div></div></div></form></div><div class="bg-gray-50 px-4 py-3 flex flex-row-reverse"><button type="button" id="kaydet-yem-urun-btn" onclick="yemUrunuKaydet()" class="rounded-md bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-500 ml-3">Kaydet</button><button type="button" onclick="toggleModal('yemUrunuModal', false)" class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50">İptal</button></div></div></div></div></div>
-    <div id="yemSilmeOnayModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('yemSilmeOnayModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6"><h3 class="text-base font-semibold mb-2">Sil?</h3><p class="text-sm text-gray-500 mb-4"><span id="silinecek-yem-adi"></span> silinecek?</p><input type="hidden" id="silinecek-yem-id"><div class="flex justify-end gap-2"><button onclick="toggleModal('yemSilmeOnayModal', false)" class="px-3 py-2 text-sm border rounded-md">İptal</button><button onclick="yemUrunuSil()" class="px-3 py-2 text-sm text-white bg-red-600 rounded-md">Sil</button></div></div></div></div></div>
-    <div id="yemIslemSilmeOnayModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('yemIslemSilmeOnayModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6"><h3 class="text-base font-semibold mb-2">İptal?</h3><p class="text-sm text-gray-500 mb-4">İşlem geri alınacak.</p><input type="hidden" id="silinecek-islem-id"><div class="flex justify-end gap-2"><button onclick="toggleModal('yemIslemSilmeOnayModal', false)" class="px-3 py-2 text-sm border rounded-md">Vazgeç</button><button onclick="yemIslemiSil()" class="px-3 py-2 text-sm text-white bg-red-600 rounded-md">İptal Et</button></div></div></div></div></div>
-    <div id="yemIslemDuzenleModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('yemIslemDuzenleModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6"><h3 class="text-base font-semibold mb-4">Düzenle</h3><input type="hidden" id="edit-islem-id"><div class="space-y-3"><div><label class="block text-sm">Miktar</label><input type="number" id="edit-miktar-input" class="block w-full border rounded-md p-2 text-sm"></div><div><label class="block text-sm">Açıklama</label><textarea id="edit-aciklama-input" class="block w-full border rounded-md p-2 text-sm"></textarea></div></div><div class="mt-5 flex justify-end gap-2"><button onclick="toggleModal('yemIslemDuzenleModal', false)" class="px-3 py-2 text-sm border rounded-md">İptal</button><button onclick="yemIslemiGuncelle()" class="px-3 py-2 text-sm text-white bg-brand-600 rounded-md">Kaydet</button></div></div></div></div></div>
+        <div class="lg:col-span-8 order-2">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[600px]">
+                <div class="px-4 py-3 border-b border-gray-200 flex flex-wrap justify-between items-center gap-3 bg-gray-50">
+                    <div class="flex space-x-2">
+                        <button onclick="switchListTab('stoklar')" id="tab-list-stoklar" class="px-3 py-1.5 rounded-md text-sm font-medium bg-white text-brand-600 shadow-sm ring-1 ring-gray-200 transition-all">Stoklar</button>
+                        <button onclick="switchListTab('islemler')" id="tab-list-islemler" class="px-3 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white transition-all">Hareketler</button>
+                    </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <div class="flex bg-gray-200 rounded-lg p-1">
+                            <button id="btn-view-table" onclick="gorunumuDegistir('tablo')" class="p-1.5 rounded text-gray-500 hover:text-brand-600 active:bg-white active:shadow-sm"><i class="fa-solid fa-list"></i></button>
+                            <button id="btn-view-card" onclick="gorunumuDegistir('kart')" class="p-1.5 rounded text-gray-500 hover:text-brand-600 active:bg-white active:shadow-sm"><i class="fa-solid fa-grip"></i></button>
+                        </div>
+                        {% if session.get('user', {}).get('rol') != 'muhasebeci' %}
+                        <button onclick="toggleModal('yemUrunuModal', true)" class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-brand-600 hover:bg-brand-700 transition-colors"><i class="fa-solid fa-plus mr-1"></i> Ürün Ekle</button>
+                        {% endif %}
+                    </div>
+                </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-    <script src="https://unpkg.com/dexie@3/dist/dexie.js"></script>
-    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/offline.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/store.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/data-loader.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/yem_yonetimi.js') }}"></script>
-    <script>
-        function switchFormTab(tab) {
-            document.getElementById('giris-panel').classList.add('hidden');
-            document.getElementById('cikis-panel').classList.add('hidden');
-            document.getElementById(tab + '-panel').classList.remove('hidden');
-            const g = document.getElementById('tab-btn-giris'); const c = document.getElementById('tab-btn-cikis');
-            if(tab==='giris'){ g.className="flex-1 py-3 text-sm font-medium text-center border-b-2 border-green-500 text-green-700 bg-green-50 transition-colors"; c.className="flex-1 py-3 text-sm font-medium text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"; }
-            else { g.className="flex-1 py-3 text-sm font-medium text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"; c.className="flex-1 py-3 text-sm font-medium text-center border-b-2 border-red-500 text-red-700 bg-red-50 transition-colors"; }
-        }
-        function switchListTab(tab) {
-            document.getElementById('panel-stoklar').classList.add('hidden');
-            document.getElementById('panel-islemler').classList.add('hidden');
-            document.getElementById('panel-'+tab).classList.remove('hidden');
-            const s = document.getElementById('tab-list-stoklar'); const i = document.getElementById('tab-list-islemler');
-            const act = "px-3 py-1.5 rounded-md text-sm font-medium bg-white text-brand-600 shadow-sm ring-1 ring-gray-200 transition-all";
-            const inact = "px-3 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white transition-all";
-            if(tab==='stoklar'){s.className=act;i.className=inact;}else{s.className=inact;i.className=act;}
-        }
-        function toggleModal(id, show) { const m=document.getElementById(id); if(show)m.classList.remove('hidden');else m.classList.add('hidden'); }
-    </script>
-</body>
-</html>
+                <div id="panel-stoklar" class="p-4">
+                    <div id="tablo-gorunumu" class="overflow-x-auto hidden">
+                        <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Yem Adı</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Stok</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Alış</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Satış</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">İşlem</th></tr></thead><tbody id="yem-urunleri-tablosu" class="bg-white divide-y divide-gray-200 text-sm"></tbody></table>
+                    </div>
+                    <div id="kart-gorunumu" class="hidden"><div id="yem-urunleri-kart-listesi" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div></div>
+                    <div id="veri-yok-mesaji" class="hidden text-center py-10 text-gray-400">Kayıtlı ürün yok.</div>
+                    <nav id="yem-urunleri-sayfalama" class="flex justify-center mt-4"></nav>
+                </div>
+
+                <div id="panel-islemler" class="hidden p-4">
+                    <div class="flex justify-end mb-3">
+                        <div class="flex bg-gray-100 rounded-lg p-1">
+                            <button id="btn-islemler-liste" onclick="gorunumuDegistirIslemler('tablo')" class="p-1.5 rounded text-brand-600 bg-white shadow-sm"><i class="fa-solid fa-list"></i></button>
+                            <button id="btn-islemler-kart" onclick="gorunumuDegistirIslemler('kart')" class="p-1.5 rounded text-gray-500 hover:text-brand-600"><i class="fa-solid fa-grip"></i></button>
+                        </div>
+                    </div>
+                    <div id="islemler-tablo-gorunumu" class="overflow-x-auto hidden">
+                        <table class="min-w-full divide-y divide-gray-200"><thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tarih</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tedarikçi</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ürün</th><th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Miktar</th><th class="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">İşlem</th></tr></thead><tbody id="yem-islemleri-listesi" class="bg-white divide-y divide-gray-200 text-sm"></tbody></table>
+                    </div>
+                    <div id="islemler-kart-gorunumu" class="hidden"><div id="yem-islemleri-kart-listesi" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div></div>
+                    <div id="yem-islemleri-veri-yok" class="hidden text-center py-10 text-gray-400">İşlem yok.</div>
+                    <nav id="yem-islemleri-sayfalama" class="flex justify-center mt-4"></nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<div id="yemUrunuModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('yemUrunuModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-md"><div class="bg-white px-4 pb-4 pt-5 border-b border-gray-100"><h3 class="text-lg font-semibold" id="yemUrunuModalLabel">Yeni Yem</h3></div><div class="px-4 py-5"><form id="yem-urun-form" class="space-y-3"><input type="hidden" id="edit-yem-id"><div><label class="block text-sm font-medium text-gray-700">Adı</label><input type="text" id="yem-adi-input" class="block w-full rounded-md border-gray-300 border p-2 text-sm"></div><div><label class="block text-sm font-medium text-gray-700">Tip</label><select id="fiyatlandirma-tipi-sec" class="block w-full rounded-md border-gray-300 border p-2 text-sm"><option value="kg">KG</option><option value="cuval">Çuval</option></select></div><div><label class="block text-sm font-medium text-gray-700" id="yem-stok-label">Stok</label><input type="number" id="yem-stok-input" class="block w-full rounded-md border-gray-300 border p-2 text-sm"></div><div id="kg-fiyat-alani" class="grid grid-cols-2 gap-2"><div><label class="text-xs">Alış</label><input type="number" step="0.01" id="yem-fiyat-input" class="block w-full rounded-md border p-2 text-sm"></div><div><label class="text-xs">Satış</label><input type="number" step="0.01" id="yem-satis-fiyat-input" class="block w-full rounded-md border p-2 text-sm"></div></div><div id="cuval-fiyat-alani" class="hidden space-y-2"><div><label class="text-xs">Çuval KG</label><input type="number" step="0.5" id="cuval-agirlik-input" class="block w-full rounded-md border p-2 text-sm"></div><div class="grid grid-cols-2 gap-2"><div><label class="text-xs">Alış</label><input type="number" step="0.01" id="cuval-fiyat-input" class="block w-full rounded-md border p-2 text-sm"></div><div><label class="text-xs">Satış</label><input type="number" step="0.01" id="yem-satis-cuval-fiyat-input" class="block w-full rounded-md border p-2 text-sm"></div></div></div></form></div><div class="bg-gray-50 px-4 py-3 flex flex-row-reverse"><button type="button" id="kaydet-yem-urun-btn" onclick="yemUrunuKaydet()" class="rounded-md bg-brand-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-brand-500 ml-3">Kaydet</button><button type="button" onclick="toggleModal('yemUrunuModal', false)" class="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50">İptal</button></div></div></div></div></div>
+<div id="yemSilmeOnayModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('yemSilmeOnayModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6"><h3 class="text-base font-semibold mb-2">Sil?</h3><p class="text-sm text-gray-500 mb-4"><span id="silinecek-yem-adi"></span> silinecek?</p><input type="hidden" id="silinecek-yem-id"><div class="flex justify-end gap-2"><button onclick="toggleModal('yemSilmeOnayModal', false)" class="px-3 py-2 text-sm border rounded-md">İptal</button><button onclick="yemUrunuSil()" class="px-3 py-2 text-sm text-white bg-red-600 rounded-md">Sil</button></div></div></div></div></div>
+<div id="yemIslemSilmeOnayModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('yemIslemSilmeOnayModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6"><h3 class="text-base font-semibold mb-2">İptal?</h3><p class="text-sm text-gray-500 mb-4">İşlem geri alınacak.</p><input type="hidden" id="silinecek-islem-id"><div class="flex justify-end gap-2"><button onclick="toggleModal('yemIslemSilmeOnayModal', false)" class="px-3 py-2 text-sm border rounded-md">Vazgeç</button><button onclick="yemIslemiSil()" class="px-3 py-2 text-sm text-white bg-red-600 rounded-md">İptal Et</button></div></div></div></div></div>
+<div id="yemIslemDuzenleModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('yemIslemDuzenleModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6"><h3 class="text-base font-semibold mb-4">Düzenle</h3><input type="hidden" id="edit-islem-id"><div class="space-y-3"><div><label class="block text-sm">Miktar</label><input type="number" id="edit-miktar-input" class="block w-full border rounded-md p-2 text-sm"></div><div><label class="block text-sm">Açıklama</label><textarea id="edit-aciklama-input" class="block w-full border rounded-md p-2 text-sm"></textarea></div></div><div class="mt-5 flex justify-end gap-2"><button onclick="toggleModal('yemIslemDuzenleModal', false)" class="px-3 py-2 text-sm border rounded-md">İptal</button><button onclick="yemIslemiGuncelle()" class="px-3 py-2 text-sm text-white bg-brand-600 rounded-md">Kaydet</button></div></div></div></div></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="{{ url_for('static', filename='js/yem_yonetimi.js') }}"></script>
+
+<script>
+    // Tablar için basit script (Local fonksiyonlar)
+    function switchFormTab(tab) {
+        document.getElementById('giris-panel').classList.add('hidden');
+        document.getElementById('cikis-panel').classList.add('hidden');
+        document.getElementById(tab + '-panel').classList.remove('hidden');
+        const g = document.getElementById('tab-btn-giris'); const c = document.getElementById('tab-btn-cikis');
+        if(tab==='giris'){ g.className="flex-1 py-3 text-sm font-medium text-center border-b-2 border-green-500 text-green-700 bg-green-50 transition-colors"; c.className="flex-1 py-3 text-sm font-medium text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"; }
+        else { g.className="flex-1 py-3 text-sm font-medium text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors"; c.className="flex-1 py-3 text-sm font-medium text-center border-b-2 border-red-500 text-red-700 bg-red-50 transition-colors"; }
+    }
+    function switchListTab(tab) {
+        document.getElementById('panel-stoklar').classList.add('hidden');
+        document.getElementById('panel-islemler').classList.add('hidden');
+        document.getElementById('panel-'+tab).classList.remove('hidden');
+        const s = document.getElementById('tab-list-stoklar'); const i = document.getElementById('tab-list-islemler');
+        const act = "px-3 py-1.5 rounded-md text-sm font-medium bg-white text-brand-600 shadow-sm ring-1 ring-gray-200 transition-all";
+        const inact = "px-3 py-1.5 rounded-md text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-white transition-all";
+        if(tab==='stoklar'){s.className=act;i.className=inact;}else{s.className=inact;i.className=act;}
+    }
+</script>
+{% endblock %}
