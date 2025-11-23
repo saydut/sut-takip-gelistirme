@@ -75,11 +75,17 @@ self.addEventListener('fetch', event => {
                     if (!fetchRes.ok || fetchRes.status === 401) {
                         return fetchRes;
                     }
-                    // Başarılı HTML'i dinamik cache'e at
-                    return caches.open(DYNAMIC_CACHE).then(cache => {
-                        cache.put(event.request.url, fetchRes.clone());
-                        return fetchRes;
+                    
+                    // KRİTİK DÜZELTME: Yanıtı hemen klonla
+                    const responseToCache = fetchRes.clone();
+
+                    // Başarılı HTML'i dinamik cache'e at (Asenkron)
+                    caches.open(DYNAMIC_CACHE).then(cache => {
+                        cache.put(event.request.url, responseToCache);
                     });
+
+                    // Orijinal yanıtı hemen döndür (Bekleme yapmaz)
+                    return fetchRes;
                 })
                 .catch(() => {
                     // İnternet yoksa cache'den dön
@@ -94,14 +100,17 @@ self.addEventListener('fetch', event => {
     }
 
     // 3. Statik Dosyalar (Cache First, sonra Network)
-    // Tailwind gibi CDN'ler hata verirse yoksay (cors policy yüzünden)
     event.respondWith(
         caches.match(event.request).then(response => {
             return response || fetch(event.request).then(fetchRes => {
                 // Sadece kendi domainimizden gelen başarılı dosyaları cache'le
                 if (fetchRes.ok && url.origin === self.location.origin) {
+                    
+                    // KRİTİK DÜZELTME: Yanıtı hemen klonla
+                    const responseToCache = fetchRes.clone();
+                    
                     caches.open(DYNAMIC_CACHE).then(cache => {
-                        cache.put(event.request.url, fetchRes.clone());
+                        cache.put(event.request.url, responseToCache);
                     });
                 }
                 return fetchRes;
@@ -113,7 +122,7 @@ self.addEventListener('fetch', event => {
     );
 });
 
-// --- PUSH BİLDİRİMLERİ (EKSİK OLAN KISIM BUYDU) ---
+// --- PUSH BİLDİRİMLERİ ---
 self.addEventListener('push', function(event) {
     if (!(self.Notification && self.Notification.permission === 'granted')) {
         return;
@@ -135,7 +144,7 @@ self.addEventListener('push', function(event) {
         badge: '/static/images/notification-icon-white.png',
         vibrate: [100, 50, 100],
         data: {
-            url: data.url || '/' // Tıklanınca gidilecek adres
+            url: data.url || '/' 
         },
         actions: data.actions || []
     };
