@@ -8,7 +8,8 @@
     
     <div id="ciftci-islemler-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 z-50 origin-top-right divide-y divide-gray-100">
         <div class="py-1">
-            <a href="#" onclick="toggleModal('aboutModal')" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
+            <!-- DÜZELTİLDİ: openGlobalHakkinda() kullanıldı -->
+            <a href="#" onclick="openGlobalHakkinda()" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
                 <i class="fa-solid fa-circle-info mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Hakkında
             </a>
             <a href="#" onclick="if(typeof askForNotificationPermission === 'function') askForNotificationPermission()" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
@@ -22,6 +23,27 @@
 </div>
 
 <script>
-    // Aynı toggle scripti _hizli_islemler.html ile çakışmaz çünkü ID'ler farklı veya aynı fonksiyonu kullanabilirler.
-    // Eğer aynı sayfada birden fazla include yoksa sorun olmaz.
+    // Basit dropdown toggle fonksiyonu (Çiftçi paneli için)
+    function toggleDropdown(id) {
+        const el = document.getElementById(id);
+        if(el) {
+            if(el.classList.contains('hidden')) {
+                el.classList.remove('hidden');
+            } else {
+                el.classList.add('hidden');
+            }
+        }
+    }
+
+    // Dışarı tıklayınca kapatma
+    window.onclick = function(event) {
+        if (!event.target.matches('#ciftci-islemler-dropdown button') && !event.target.matches('#ciftci-islemler-dropdown button *')) {
+            const dropdowns = document.getElementsByClassName("hidden");
+            // Burada sadece spesifik ID'yi kapatmak daha güvenli
+            const menu = document.getElementById('ciftci-islemler-menu');
+            if (menu && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
+        }
+    }
 </script>

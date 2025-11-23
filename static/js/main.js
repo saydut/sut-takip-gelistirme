@@ -80,7 +80,6 @@ async function verileriYukle() {
     
     try {
         const ozet = await api.fetchGunlukOzet(tarih);
-        // ui.js'in bu fonksiyonu utils.formatNumber kullanır, artık hata vermeyecek
         ui.updateOzetPanels(ozet, tarih);
     } catch(e) {}
 
@@ -183,3 +182,36 @@ async function sutGirdisiEkle() {
         ui.toggleGirdiKaydetButton(false);
     }
 }
+
+// === YENİ: HAKKINDA MODAL İŞLEMLERİ ===
+
+// Modalı açan fonksiyon
+function openGlobalHakkinda() {
+    const modal = document.getElementById('global-hakkinda-modal');
+    if (modal) {
+        modal.classList.remove('hidden');
+        // İçerik animasyonu için (opsiyonel)
+        const innerDiv = modal.querySelector('div[class*="transform"]');
+        if(innerDiv) {
+            innerDiv.classList.add('scale-100', 'opacity-100');
+            innerDiv.classList.remove('scale-95', 'opacity-0');
+        }
+    } else {
+        console.error('Hakkında modalı bulunamadı!');
+    }
+}
+
+// Modalı kapatan fonksiyon
+function closeGlobalHakkinda() {
+    const modal = document.getElementById('global-hakkinda-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+// ESC tuşuna basınca kapatma
+document.addEventListener('keydown', function(event) {
+    if (event.key === "Escape") {
+        closeGlobalHakkinda();
+    }
+});

@@ -96,118 +96,95 @@
     </nav>
     {% endif %}
 
-    <div id="hakkindaModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="toggleModal('hakkindaModal', false)"></div>
-        <div class="fixed inset-0 z-10 overflow-y-auto">
-            <div class="flex min-h-full items-center justify-center p-4 text-center sm:p-0">
-                <div class="relative transform overflow-hidden rounded-xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-2xl flex flex-col max-h-[85vh]">
+    <!-- GLOBAL HAKKINDA MODAL (YENİ VE DETAYLI) -->
+    <div id="global-hakkinda-modal" class="fixed inset-0 z-[60] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+        <!-- Arkaplan Karartma -->
+        <div class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity" onclick="closeGlobalHakkinda()"></div>
+
+        <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+                <!-- Modal İçeriği -->
+                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
                     
-                    <div class="bg-gray-50 px-4 py-3 sm:px-6 flex justify-between items-center border-b border-gray-200 flex-shrink-0">
-                        <h3 class="text-lg font-semibold leading-6 text-gray-900">
-                            <i class="fa-solid fa-circle-info text-brand-600 mr-2"></i>Hakkında
-                        </h3>
-                        <button type="button" class="text-gray-400 hover:text-gray-500 focus:outline-none" onclick="toggleModal('hakkindaModal', false)">
+                    <!-- Başlık Kısmı (Markalı) -->
+                    <div class="bg-brand-600 px-4 py-6 sm:px-6 text-center relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-full h-full opacity-10">
+                            <i class="fa-solid fa-cow text-9xl text-white transform -rotate-12 translate-x-1/2"></i>
+                        </div>
+                        <div class="relative z-10">
+                            <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm mb-4">
+                                <i class="fa-solid fa-cow text-3xl text-white"></i>
+                            </div>
+                            <h3 class="text-2xl font-bold leading-6 text-white" id="modal-title">Süt Takip Sistemi</h3>
+                            <p class="mt-2 text-sm text-brand-100">Modern Çiftlik & Süt Yönetim Platformu</p>
+                        </div>
+                        <!-- Kapatma Butonu -->
+                        <button type="button" onclick="closeGlobalHakkinda()" class="absolute top-4 right-4 text-white/70 hover:text-white transition-colors">
                             <i class="fa-solid fa-xmark text-xl"></i>
                         </button>
                     </div>
 
-                    <div class="border-b border-gray-200 bg-white px-4 flex-shrink-0">
-                        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                            <button onclick="switchTab('ozellikler')" id="tab-btn-ozellikler" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm active-tab">
-                                Özellikler
-                            </button>
-                            <button onclick="switchTab('guncellemeler')" id="tab-btn-guncellemeler" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                                Sürüm Notları
-                            </button>
-                            <button onclick="switchTab('iletisim')" id="tab-btn-iletisim" class="tab-btn border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">
-                                İletişim
-                            </button>
-                        </nav>
-                    </div>
-
-                    <div class="px-6 py-6 overflow-y-auto flex-1">
-                        
-                        <div id="tab-content-ozellikler" class="tab-content block space-y-4">
-                            <h4 class="font-bold text-gray-900 text-lg">Nasıl Kullanılır?</h4>
-                            <ul class="space-y-3">
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 h-6 w-6 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-bold mt-0.5 mr-3">1</div>
-                                    <p class="text-sm text-gray-600"><strong>Tedarikçi Ekle:</strong> "Tedarikçi" menüsünden süt aldığınız üreticileri kaydedin.</p>
-                                </li>
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 h-6 w-6 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-bold mt-0.5 mr-3">2</div>
-                                    <p class="text-sm text-gray-600"><strong>Veri Girişi:</strong> Ana ekrandan veya tedarikçi detayından günlük süt miktarını girin.</p>
-                                </li>
-                                <li class="flex items-start">
-                                    <div class="flex-shrink-0 h-6 w-6 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-xs font-bold mt-0.5 mr-3">3</div>
-                                    <p class="text-sm text-gray-600"><strong>Raporlama:</strong> Raporlar sayfasından haftalık/aylık özetleri PDF olarak alın.</p>
-                                </li>
-                            </ul>
+                    <!-- İçerik Gövdesi -->
+                    <div class="px-4 py-5 sm:p-6">
+                        <div class="space-y-6">
                             
-                            <h4 class="font-bold text-gray-900 text-lg mt-6">Özellikler</h4>
+                            <!-- Versiyon -->
+                            <div class="text-center border-b border-gray-100 pb-4">
+                                <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                    v{{ APP_VERSION }} (Beta)
+                                </span>
+                                <p class="mt-3 text-sm text-gray-500">
+                                    Süt toplama süreçlerinizi dijitalleştirin, finansal takibinizi kolaylaştırın ve verimliliğinizi artırın.
+                                </p>
+                            </div>
+
+                            <!-- Özellikler Grid -->
                             <div class="grid grid-cols-2 gap-4">
-                                <div class="flex items-center p-3 bg-gray-50 rounded-lg">
-                                    <i class="fa-solid fa-cloud-slash text-green-500 mr-3 text-xl"></i>
-                                    <span class="text-sm font-medium">Çevrimdışı Mod</span>
+                                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 text-center hover:bg-brand-50 hover:border-brand-200 transition-colors">
+                                    <i class="fa-solid fa-bucket text-brand-500 mb-2 text-xl"></i>
+                                    <h4 class="font-semibold text-gray-900 text-sm">Süt Takibi</h4>
+                                    <p class="text-xs text-gray-500 mt-1">Hızlı litre kaydı</p>
                                 </div>
-                                <div class="flex items-center p-3 bg-gray-50 rounded-lg">
-                                    <i class="fa-solid fa-file-pdf text-red-500 mr-3 text-xl"></i>
-                                    <span class="text-sm font-medium">PDF Çıktı</span>
+                                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 text-center hover:bg-green-50 hover:border-green-200 transition-colors">
+                                    <i class="fa-solid fa-wallet text-green-500 mb-2 text-xl"></i>
+                                    <h4 class="font-semibold text-gray-900 text-sm">Finans</h4>
+                                    <p class="text-xs text-gray-500 mt-1">Alacak/Verecek</p>
+                                </div>
+                                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 text-center hover:bg-purple-50 hover:border-purple-200 transition-colors">
+                                    <i class="fa-solid fa-chart-line text-purple-500 mb-2 text-xl"></i>
+                                    <h4 class="font-semibold text-gray-900 text-sm">Raporlar</h4>
+                                    <p class="text-xs text-gray-500 mt-1">Detaylı analiz</p>
+                                </div>
+                                <div class="p-3 bg-gray-50 rounded-lg border border-gray-100 text-center hover:bg-orange-50 hover:border-orange-200 transition-colors">
+                                    <i class="fa-solid fa-users text-orange-500 mb-2 text-xl"></i>
+                                    <h4 class="font-semibold text-gray-900 text-sm">Tedarikçiler</h4>
+                                    <p class="text-xs text-gray-500 mt-1">Müstahsil yönetimi</p>
                                 </div>
                             </div>
-                        </div>
 
-                        <div id="tab-content-guncellemeler" class="tab-content hidden space-y-4">
-                            <div class="flex justify-between items-center bg-gray-100 p-3 rounded-lg mb-4">
-                                <span class="font-semibold text-gray-900">Mevcut Sürüm: {{ APP_VERSION }}</span>
-                                {% if SURUM_NOTLARI and SURUM_NOTLARI[0] %}
-                                    <span class="text-xs text-gray-500">{{ SURUM_NOTLARI[0].yayin_tarihi | format_tarih_str }}</span>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="space-y-2">
-                                {% if not SURUM_NOTLARI %}
-                                    <p class="text-sm text-gray-500 italic">Henüz sürüm notu bulunmuyor.</p>
-                                {% else %}
-                                    {% for surum in SURUM_NOTLARI %}
-                                    <details class="group border border-gray-200 rounded-lg [&_summary::-webkit-details-marker]:hidden">
-                                        <summary class="flex cursor-pointer items-center justify-between gap-1.5 bg-gray-50 p-4 text-gray-900 rounded-lg group-open:rounded-b-none transition-colors hover:bg-gray-100">
-                                            <h5 class="font-medium text-sm">v{{ surum.surum_no }} - {{ surum.yayin_tarihi | format_tarih_str }}</h5>
-                                            <i class="fa-solid fa-chevron-down w-5 h-5 transition duration-300 group-open:-rotate-180"></i>
-                                        </summary>
-                                        <div class="p-4 text-sm leading-relaxed text-gray-700 bg-white rounded-b-lg border-t border-gray-100">
-                                            <ul class="list-disc list-inside space-y-1">
-                                                {% for line in surum.notlar.split('\n') %}
-                                                    {% set cleaned = line.strip().lstrip('- ').lstrip('* ') %}
-                                                    {% if cleaned %}<li>{{ cleaned | safe }}</li>{% endif %}
-                                                {% endfor %}
-                                            </ul>
-                                        </div>
-                                    </details>
-                                    {% endfor %}
-                                {% endif %}
+                            <!-- İletişim -->
+                            <div class="bg-gray-50 rounded-xl p-4 text-center text-sm text-gray-600">
+                                <p class="font-medium text-gray-900 mb-1">Geliştirici & Destek</p>
+                                <a href="https://wa.me/905539571515" target="_blank" class="inline-flex items-center text-brand-600 hover:text-brand-700 font-medium">
+                                    <i class="fa-brands fa-whatsapp mr-1"></i> WhatsApp Destek
+                                </a>
+                                <p class="mt-2 text-xs text-gray-400">© 2024 Tüm Hakları Saklıdır.</p>
                             </div>
                         </div>
-
-                        <div id="tab-content-iletisim" class="tab-content hidden text-center py-8">
-                            <i class="fa-brands fa-whatsapp text-6xl text-green-500 mb-4"></i>
-                            <h4 class="text-xl font-bold text-gray-900 mb-2">Destek Hattı</h4>
-                            <p class="text-gray-600 mb-6">Her türlü soru, sorun ve öneriniz için bize WhatsApp üzerinden ulaşabilirsiniz.</p>
-                            <a href="https://wa.me/905539571515" target="_blank" class="inline-flex items-center justify-center rounded-full bg-green-600 px-6 py-3 text-base font-bold text-white shadow-lg hover:bg-green-700 transition-all transform hover:scale-105">
-                                <i class="fa-brands fa-whatsapp mr-2"></i> WhatsApp ile Bağlan
-                            </a>
-                        </div>
-
                     </div>
 
-                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200 flex-shrink-0">
-                        <button type="button" class="w-full inline-flex justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto" onclick="toggleModal('hakkindaModal', false)">Kapat</button>
+                    <!-- Alt Buton -->
+                    <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                        <button type="button" onclick="closeGlobalHakkinda()" class="inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto">
+                            Kapat
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Şifre Değiştir Modal -->
     <div id="sifreDegistirModal" class="fixed inset-0 z-50 hidden" role="dialog" aria-modal="true">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="toggleModal('sifreDegistirModal', false)"></div>
         <div class="fixed inset-0 z-10 overflow-y-auto">
@@ -242,44 +219,13 @@
     <script>
         // --- Temel Yardımcı Fonksiyonlar ---
 
-        // Modal Aç/Kapa - Bu fonksiyon globaldir ve tüm sayfalar bunu kullanır
+        // Modal Aç/Kapa - Mevcut sistemler için
         function toggleModal(modalId, show) {
             const modal = document.getElementById(modalId);
             if (modal) {
                 if (show) modal.classList.remove('hidden');
                 else modal.classList.add('hidden');
-            } else {
-                console.error("Modal bulunamadı: " + modalId);
             }
-        }
-
-        // Tab Değiştirme (Basit JS)
-        function switchTab(tabName) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            const target = document.getElementById('tab-content-' + tabName);
-            if(target) target.classList.remove('hidden');
-
-            document.querySelectorAll('.tab-btn').forEach(el => {
-                el.classList.remove('border-brand-500', 'text-brand-600');
-                el.classList.add('border-transparent', 'text-gray-500');
-            });
-            const activeBtn = document.getElementById('tab-btn-' + tabName);
-            if(activeBtn) {
-                activeBtn.classList.remove('border-transparent', 'text-gray-500');
-                activeBtn.classList.add('border-brand-500', 'text-brand-600');
-            }
-        }
-
-        // Bootstrap Shim
-        if (typeof bootstrap === 'undefined') {
-            window.bootstrap = {
-                Modal: class {
-                    constructor(element) { this.element = element; }
-                    show() { toggleModal(this.element.id, true); }
-                    hide() { toggleModal(this.element.id, false); }
-                    static getInstance(element) { return new bootstrap.Modal(element); }
-                }
-            };
         }
     </script>
 
@@ -328,10 +274,8 @@
 
                     if (isActive) link.classList.add('active');
                 });
-                switchTab('ozellikler');
             });
 
-            // Service Worker
             if ('serviceWorker' in navigator) {
                 window.addEventListener('load', () => {
                     navigator.serviceWorker.register("/service-worker.js").catch(err => console.log('SW Hata:', err));
