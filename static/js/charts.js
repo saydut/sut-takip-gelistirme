@@ -1,25 +1,28 @@
-// ====================================================================================
-// GRAFİK YÖNETİMİ (charts.js)
-// Bu dosya, Chart.js kütüphanesi ile ilgili tüm işlemleri içerir.
-// Gerekli veriyi api.js üzerinden çeker ve grafikleri oluşturur/günceller.
-// ====================================================================================
+// static/js/charts.js
 
-const charts = {
+// [ÇÖZÜM] window.charts kullanarak "already declared" hatasını engelliyoruz.
+window.charts = {
     haftalikChart: null,
     tedarikciChart: null,
 
-    /**
-     * Son 7 günlük süt toplama grafiğini oluşturur.
-     */
+    // --- HAFTALIK SÜT GRAFİĞİ ---
     async haftalikGrafigiOlustur() {
         try {
-            const veri = await api.fetchHaftalikOzet();
+            let veri = await api.fetchHaftalikOzet();
+            
+            // Backend liste dönerse objeye çevir
+            if (Array.isArray(veri)) {
+                veri = veri.length > 0 ? veri[0] : { labels: [], data: [] };
+            }
+            
             const canvas = document.getElementById('haftalikRaporGrafigi');
-            if (!canvas) return; // Canvas elementi yoksa işlemi durdur
+            if (!canvas) return;
             const ctx = canvas.getContext('2d');
             
+            // Eski grafiği temizle (Hata önleyici)
             if (this.haftalikChart) {
-                unregisterChart(this.haftalikChart);
+                // chart-manager.js yüklüyse ordan sil, değilse direkt destroy et
+                if(typeof unregisterChart === 'function') unregisterChart(this.haftalikChart);
                 this.haftalikChart.destroy();
                 this.haftalikChart = null; 
             }
@@ -27,12 +30,14 @@ const charts = {
             this.haftalikChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: veri.labels,
+                    labels: veri.labels || [],
                     datasets: [{
                         label: 'Toplanan Süt (Litre)',
-                        data: veri.data,
+                        data: veri.data || [],
                         borderWidth: 1,
-                        borderRadius: 5
+                        borderRadius: 5,
+                        backgroundColor: 'rgba(59, 130, 246, 0.8)', // Mavi ton
+                        borderColor: 'rgba(59, 130, 246, 1)'
                     }]
                 },
                 options: {
@@ -49,29 +54,26 @@ const charts = {
                 }
             });
 
-            registerChart(this.haftalikChart); 
-            if (typeof updateAllChartThemes === 'function') {
-                updateAllChartThemes();
-            }
+            // Tema yöneticisine kaydet
+            if(typeof registerChart === 'function') registerChart(this.haftalikChart); 
+            if(typeof updateAllChartThemes === 'function') updateAllChartThemes();
 
         } catch (error) {
-            console.error("Haftalık grafik oluşturulurken hata:", error.message);
+            console.error("Haftalık grafik hatası:", error.message);
+            // Hata olsa bile kullanıcıya boş grafik göstermemek için canvas'ı temizleyebiliriz veya hata mesajı basabiliriz
         }
     },
 
-
-    /**
-     * Tedarikçi dağılımı grafiğini (doughnut) oluşturur.
-     * YENİ: Opsiyonel 'period' parametresi alır.
-     */
-    async tedarikciGrafigiOlustur(period = 'monthly') { // Varsayılan 'monthly'
+    // --- TEDARİKÇİ DAĞILIM GRAFİĞİ ---
+    async tedarikciGrafigiOlustur(period = 'monthly') { 
         const veriYokMesaji = document.getElementById('tedarikci-veri-yok');
         const canvas = document.getElementById('tedarikciDagilimGrafigi');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
 
+        // Eski grafiği temizle
         if (this.tedarikciChart) {
-            unregisterChart(this.tedarikciChart);
+            if(typeof unregisterChart === 'function') unregisterChart(this.tedarikciChart);
             this.tedarikciChart.destroy();
             this.tedarikciChart = null;
         }
@@ -79,26 +81,32 @@ const charts = {
         canvas.style.display = 'none';
         if (veriYokMesaji) {
             veriYokMesaji.style.display = 'block';
-            veriYokMesaji.innerHTML = '<div class="spinner-border spinner-border-sm" role="status"></div>';
+            veriYokMesaji.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
         }
 
         try {
-            // YENİ: API'yi 'period' parametresi ile çağır
             const veri = await api.fetchTedarikciDagilimi(period);
             
-            if (veri.labels.length === 0) {
+            // Veri kontrolü
+            if (!veri || !veri.labels || veri.labels.length === 0) {
                 let mesaj = 'Veri bulunamadı.';
                 if(period === 'daily') mesaj = 'Son 24 saatte veri yok.';
                 else if(period === 'weekly') mesaj = 'Son 7 günde veri yok.';
                 else if(period === 'monthly') mesaj = 'Son 30 günde veri yok.';
                 
-                if (veriYokMesaji) veriYokMesaji.textContent = mesaj;
+                if (veriYokMesaji) {
+                    veriYokMesaji.style.display = 'block';
+                    veriYokMesaji.textContent = mesaj;
+                    // Stil düzeltmeleri
+                    veriYokMesaji.className = "absolute inset-0 flex items-center justify-center text-gray-400 text-sm";
+                }
                 return;
             }
 
             const GRAFIKTE_GOSTERILECEK_SAYI = 9;
             let islenmisVeri = { labels: veri.labels, data: veri.data };
 
+            // Çok fazla veri varsa "Diğerleri" olarak birleştir
             if (veri.labels.length > GRAFIKTE_GOSTERILECEK_SAYI + 1) {
                 const digerleriToplami = veri.data.slice(GRAFIKTE_GOSTERILECEK_SAYI).reduce((a, b) => a + b, 0);
                 islenmisVeri.labels = veri.labels.slice(0, GRAFIKTE_GOSTERILECEK_SAYI);
@@ -130,36 +138,37 @@ const charts = {
                     plugins: {
                         legend: {
                             position: 'right',
-                            labels: { font: { size: 12 } }
+                            labels: { font: { size: 11 }, boxWidth: 12 }
                         }
+                    },
+                    layout: {
+                        padding: { left: 0, right: 0, top: 0, bottom: 0 }
                     }
                 }
             });
 
-            registerChart(this.tedarikciChart); 
-            if (typeof updateAllChartThemes === 'function') {
-                updateAllChartThemes();
-            }
+            if(typeof registerChart === 'function') registerChart(this.tedarikciChart); 
+            if(typeof updateAllChartThemes === 'function') updateAllChartThemes();
 
         } catch (error) {
-            console.error("Tedarikçi grafiği oluşturulurken hata:", error.message);
-            if (veriYokMesaji) veriYokMesaji.textContent = 'Grafik yüklenemedi.';
+            console.error("Tedarikçi grafiği hatası:", error.message);
+            if (veriYokMesaji) {
+                veriYokMesaji.style.display = 'block';
+                veriYokMesaji.textContent = 'Grafik yüklenemedi.';
+            }
         }
     }
 };
 
-// YENİ: Butonları dinlemek için DOMContentLoaded olayı
-// Bu kod, 'charts' objesini global yaptığı için 'reports.js' içinden de erişilebilir.
+// Olay dinleyicisi (Güvenli ekleme)
 document.addEventListener('DOMContentLoaded', function() {
     const filtreGrubu = document.getElementById('tedarikci-filtre-grup');
-    
     if (filtreGrubu) {
-        // Butonlara tıklama olayı ekle
-        filtreGrubu.addEventListener('change', (event) => {
-            if (event.target.name === 'tedarikci-periyot') {
-                const secilenPeriyot = event.target.value; // 'daily', 'weekly', 'monthly'
-                charts.tedarikciGrafigiOlustur(secilenPeriyot);
+        // Eski listenerları temizlemek yerine yenisini ekliyoruz, çakışma olmaz
+        filtreGrubu.onchange = (event) => {
+            if (event.target.name === 'tedarikci-periyot' && window.charts) {
+                window.charts.tedarikciGrafigiOlustur(event.target.value);
             }
-        });
+        };
     }
 });
