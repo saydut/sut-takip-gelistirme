@@ -1,32 +1,50 @@
 // static/js/charts.js
 
-// [ÇÖZÜM] window.charts kullanarak "already declared" hatasını engelliyoruz.
+// [ÇÖZÜM] window.charts kullanarak "already declared" hatasını ve çakışmaları engelliyoruz.
 window.charts = {
     haftalikChart: null,
     tedarikciChart: null,
 
     // --- HAFTALIK SÜT GRAFİĞİ ---
     async haftalikGrafigiOlustur() {
+        const loadingElement = document.getElementById('haftalik-grafik-loading');
+        const toplamElement = document.getElementById('haftalik-toplam-litre');
+        const canvas = document.getElementById('haftalikRaporGrafigi');
+
+        if (!canvas) return;
+
+        // 1. Yükleniyor animasyonunu göster
+        if (loadingElement) loadingElement.style.display = 'flex';
+
         try {
             let veri = await api.fetchHaftalikOzet();
             
-            // Backend liste dönerse objeye çevir
+            // Backend liste dönerse objeye çevir, boşsa varsayılan ata
             if (Array.isArray(veri)) {
                 veri = veri.length > 0 ? veri[0] : { labels: [], data: [] };
             }
             
-            const canvas = document.getElementById('haftalikRaporGrafigi');
-            if (!canvas) return;
+            // 2. Toplam Litreyi Hesapla ve Yazdır
+            // (Veritabanından toplam gelmese bile biz burada topluyoruz)
+            let toplamLitre = 0;
+            if (veri.data && Array.isArray(veri.data)) {
+                toplamLitre = veri.data.reduce((a, b) => a + (parseFloat(b) || 0), 0);
+            }
+
+            if (toplamElement) {
+                toplamElement.textContent = toplamLitre.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Lt';
+            }
+            
             const ctx = canvas.getContext('2d');
             
             // Eski grafiği temizle (Hata önleyici)
             if (this.haftalikChart) {
-                // chart-manager.js yüklüyse ordan sil, değilse direkt destroy et
                 if(typeof unregisterChart === 'function') unregisterChart(this.haftalikChart);
                 this.haftalikChart.destroy();
                 this.haftalikChart = null; 
             }
 
+            // Yeni Grafiği Oluştur
             this.haftalikChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -35,21 +53,36 @@ window.charts = {
                         label: 'Toplanan Süt (Litre)',
                         data: veri.data || [],
                         borderWidth: 1,
-                        borderRadius: 5,
-                        backgroundColor: 'rgba(59, 130, 246, 0.8)', // Mavi ton
-                        borderColor: 'rgba(59, 130, 246, 1)'
+                        borderRadius: 4, // Çubuk köşelerini hafif yuvarla
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)', // Brand Blue
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        hoverBackgroundColor: 'rgba(59, 130, 246, 0.9)'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true },
-                        x: { grid: { display: false } }
+                        y: { 
+                            beginAtZero: true,
+                            grid: { color: '#f3f4f6' }, // Hafif ızgara çizgileri
+                            ticks: { font: { size: 11 } }
+                        },
+                        x: { 
+                            grid: { display: false },
+                            ticks: { font: { size: 11 } }
+                        }
                     },
                     plugins: {
                         legend: { display: false },
-                        tooltip: { callbacks: { label: (c) => ` Toplam: ${c.parsed.y} Litre` } }
+                        tooltip: { 
+                            backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                            padding: 10,
+                            cornerRadius: 8,
+                            callbacks: { 
+                                label: (c) => ` Miktar: ${parseFloat(c.parsed.y).toLocaleString('tr-TR')} Lt` 
+                            } 
+                        }
                     }
                 }
             });
@@ -60,7 +93,13 @@ window.charts = {
 
         } catch (error) {
             console.error("Haftalık grafik hatası:", error.message);
-            // Hata olsa bile kullanıcıya boş grafik göstermemek için canvas'ı temizleyebiliriz veya hata mesajı basabiliriz
+            if (canvas.parentNode) {
+                // Grafiğin olduğu yere hata mesajı bas (İsteğe bağlı)
+                // canvas.parentNode.innerHTML = '<div class="text-red-500 text-sm text-center py-10">Grafik yüklenemedi.</div>';
+            }
+        } finally {
+            // 3. Yükleniyor animasyonunu KESİN olarak gizle
+            if (loadingElement) loadingElement.style.display = 'none';
         }
     },
 
@@ -80,8 +119,8 @@ window.charts = {
         
         canvas.style.display = 'none';
         if (veriYokMesaji) {
-            veriYokMesaji.style.display = 'block';
-            veriYokMesaji.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"></div>';
+            veriYokMesaji.style.display = 'flex'; // flex ile ortala
+            veriYokMesaji.innerHTML = '<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-600"></div>';
         }
 
         try {
@@ -95,9 +134,8 @@ window.charts = {
                 else if(period === 'monthly') mesaj = 'Son 30 günde veri yok.';
                 
                 if (veriYokMesaji) {
-                    veriYokMesaji.style.display = 'block';
+                    veriYokMesaji.style.display = 'flex';
                     veriYokMesaji.textContent = mesaj;
-                    // Stil düzeltmeleri
                     veriYokMesaji.className = "absolute inset-0 flex items-center justify-center text-gray-400 text-sm";
                 }
                 return;
@@ -129,7 +167,8 @@ window.charts = {
                             '#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#6366F1', 
                             '#8B5CF6', '#EC4899', '#F97316', '#06B6D4', '#64748B'
                         ],
-                        borderWidth: 2
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
                     }]
                 },
                 options: {
@@ -138,7 +177,19 @@ window.charts = {
                     plugins: {
                         legend: {
                             position: 'right',
-                            labels: { font: { size: 11 }, boxWidth: 12 }
+                            labels: { font: { size: 11 }, boxWidth: 12, usePointStyle: true }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.label || '';
+                                    if (label) label += ': ';
+                                    let value = context.parsed;
+                                    let total = context.chart._metasets[context.datasetIndex].total;
+                                    let percentage = ((value / total) * 100).toFixed(1) + '%';
+                                    return label + value.toLocaleString('tr-TR') + ' Lt (' + percentage + ')';
+                                }
+                            }
                         }
                     },
                     layout: {
@@ -153,7 +204,7 @@ window.charts = {
         } catch (error) {
             console.error("Tedarikçi grafiği hatası:", error.message);
             if (veriYokMesaji) {
-                veriYokMesaji.style.display = 'block';
+                veriYokMesaji.style.display = 'flex';
                 veriYokMesaji.textContent = 'Grafik yüklenemedi.';
             }
         }
@@ -164,7 +215,6 @@ window.charts = {
 document.addEventListener('DOMContentLoaded', function() {
     const filtreGrubu = document.getElementById('tedarikci-filtre-grup');
     if (filtreGrubu) {
-        // Eski listenerları temizlemek yerine yenisini ekliyoruz, çakışma olmaz
         filtreGrubu.onchange = (event) => {
             if (event.target.name === 'tedarikci-periyot' && window.charts) {
                 window.charts.tedarikciGrafigiOlustur(event.target.value);

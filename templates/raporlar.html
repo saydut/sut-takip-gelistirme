@@ -155,9 +155,17 @@
             {% endif %}
 
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                    <h5 class="font-bold text-gray-800 mb-4">Son 7 Günlük Süt Toplama</h5>
+                <div class="lg:col-span-7 bg-white rounded-xl shadow-sm border border-gray-200 p-5 relative">
+                    <div class="flex justify-between items-center mb-4">
+                        <h5 class="font-bold text-gray-800">Son 7 Günlük Süt Toplama</h5>
+                        <span class="text-sm font-medium text-gray-500 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">
+                            Toplam: <span id="haftalik-toplam-litre" class="text-brand-600 font-bold">0,00 Lt</span>
+                        </span>
+                    </div>
                     <div class="relative h-64 w-full">
+                        <div id="haftalik-grafik-loading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 z-10 transition-opacity">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+                        </div>
                         <canvas id="haftalikRaporGrafigi"></canvas>
                     </div>
                 </div>
@@ -251,6 +259,7 @@
     <script src="{{ url_for('static', filename='js/chart-manager.js') }}"></script>
 
     <script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
 {% endblock %}
 
 </body>
