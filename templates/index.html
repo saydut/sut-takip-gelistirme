@@ -23,102 +23,245 @@
 </header>
 
 <main class="flex-1 overflow-y-auto bg-gray-50 p-4 pb-24">
-    <div class="max-w-7xl mx-auto space-y-6">
+    <div class="max-w-7xl mx-auto">
         
-        <div id="alert-container"></div>
+        <div id="alert-container" class="mb-4"></div>
 
-        <div class="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="bg-white overflow-hidden rounded-xl shadow-sm border border-gray-100 relative group hover:border-brand-200 transition-all">
-                <div class="p-4">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 bg-blue-50 rounded-lg p-3 group-hover:bg-blue-100 transition-colors">
-                            <i class="fa-solid fa-droplet text-brand-600 text-xl"></i>
+        {% if session.get('user', {}).get('rol') != 'ciftci' %}
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <div class="lg:col-span-4 space-y-6 order-1">
+                
+                <div id="veri-giris-paneli" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="bg-brand-50 px-4 py-3 border-b border-gray-100 flex justify-between items-center">
+                        <h3 class="font-bold text-brand-800"><i class="fa-solid fa-plus mr-2"></i>Yeni Süt Girdisi</h3>
+                    </div>
+                    <div class="p-4 space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Tedarikçi</label>
+                            <select id="tedarikci-sec" class="w-full"></select>
                         </div>
-                        <div class="ml-4 w-0 flex-1">
-                            <dl>
-                                <dt class="text-xs font-medium text-gray-500 truncate">Günlük Toplam</dt>
-                                <dd class="flex items-baseline">
-                                    <div class="text-lg font-bold text-gray-900" id="gunluk-toplam-litre">-</div>
-                                    <span class="ml-1 text-xs text-gray-500">Lt</span>
-                                </dd>
-                            </dl>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Litre</label>
+                                <input type="number" id="litre-input" step="0.1" class="block w-full rounded-lg border-gray-300 border p-2 text-sm focus:ring-brand-500 focus:border-brand-500" placeholder="0.0">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Fiyat</label>
+                                <input type="number" id="fiyat-input" step="0.01" class="block w-full rounded-lg border-gray-300 border p-2 text-sm bg-white focus:ring-brand-500 focus:border-brand-500" placeholder="Otomatik">
+                            </div>
+                        </div>
+                        <button id="kaydet-girdi-btn" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-brand-500">
+                            <i class="fa-solid fa-save mr-2 mt-0.5"></i> Kaydet
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-white overflow-hidden rounded-xl shadow-sm border border-gray-100 relative group hover:border-brand-200 transition-all">
+                        <div class="p-3">
+                            <div class="flex items-center flex-col text-center">
+                                <div class="bg-blue-50 rounded-lg p-2 mb-2 text-brand-600">
+                                    <i class="fa-solid fa-droplet text-xl"></i>
+                                </div>
+                                <div class="text-xs font-medium text-gray-500 uppercase">Günlük Toplam</div>
+                                <div class="text-xl font-bold text-gray-900 mt-1">
+                                    <span id="toplam-litre-panel">-</span> <span class="text-xs text-gray-400">Lt</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white overflow-hidden rounded-xl shadow-sm border border-gray-100 relative group hover:border-green-200 transition-all">
+                        <div class="p-3">
+                            <div class="flex items-center flex-col text-center">
+                                <div class="bg-green-50 rounded-lg p-2 mb-2 text-green-600">
+                                    <i class="fa-solid fa-receipt text-xl"></i>
+                                </div>
+                                <div class="text-xs font-medium text-gray-500 uppercase">Girdi Sayısı</div>
+                                <div class="text-xl font-bold text-gray-900 mt-1">
+                                    <span id="bugunku-girdi-sayisi">-</span> <span class="text-xs text-gray-400">Adet</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                
+                <div class="bg-white overflow-hidden rounded-xl shadow-sm border border-gray-100 p-3 flex justify-between items-center">
+                     <span class="text-sm text-gray-600">Tahmini Tutar:</span>
+                     <span class="font-bold text-green-600" id="gunluk-toplam-tutar">- TL</span>
+                </div>
+
             </div>
 
-            <div class="bg-white overflow-hidden rounded-xl shadow-sm border border-gray-100 relative group hover:border-green-200 transition-all">
-                <div class="p-4">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 bg-green-50 rounded-lg p-3 group-hover:bg-green-100 transition-colors">
-                            <i class="fa-solid fa-turkish-lira-sign text-green-600 text-xl"></i>
+            <div class="lg:col-span-8 space-y-4 order-2">
+                
+                <div class="bg-white p-3 rounded-xl shadow-sm border border-gray-200 flex flex-wrap gap-3 justify-between items-center">
+                    <h5 id="girdiler-baslik" class="font-bold text-gray-800 flex items-center">
+                        <i class="fa-solid fa-list-ul mr-2 text-brand-500"></i>Girdiler
+                    </h5>
+                    <div class="flex items-center gap-2">
+                        <input type="text" id="tarih-filtre" class="block w-32 rounded-lg border-gray-300 border p-1.5 text-sm focus:ring-brand-500 focus:border-brand-500" placeholder="Tarih Seç">
+                        <button onclick="filtreyiTemizle()" class="p-2 text-gray-500 hover:text-brand-600 bg-gray-100 rounded-lg transition-colors" title="Bugüne Dön">
+                            <i class="fa-solid fa-calendar-day"></i>
+                        </button>
+                        <div class="flex bg-gray-100 rounded-lg p-0.5 border border-gray-200">
+                            <button id="btn-view-list" onclick="gorunumuDegistir('liste')" class="p-1.5 rounded-md text-brand-600 bg-white shadow-sm transition-all"><i class="fa-solid fa-list"></i></button>
+                            <button id="btn-view-card" onclick="gorunumuDegistir('kart')" class="p-1.5 rounded-md text-gray-500 hover:text-brand-600 transition-all"><i class="fa-solid fa-grip"></i></button>
                         </div>
-                        <div class="ml-4 w-0 flex-1">
-                            <dl>
-                                <dt class="text-xs font-medium text-gray-500 truncate">Tahmini Tutar</dt>
-                                <dd class="flex items-baseline">
-                                    <div class="text-lg font-bold text-gray-900" id="gunluk-toplam-tutar">-</div>
-                                    <span class="ml-1 text-xs text-gray-500">TL</span>
-                                </dd>
-                            </dl>
+                    </div>
+                </div>
+
+                <div id="liste-gorunumu" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden min-h-[300px]">
+                    <div id="girdiler-listesi" class="divide-y divide-gray-100">
                         </div>
+                </div>
+
+                <div id="kart-gorunumu" class="hidden">
+                    <div id="girdiler-kart-listesi" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+                </div>
+                
+                <div id="veri-yok-mesaji" class="hidden text-center py-10 bg-white rounded-xl border border-dashed border-gray-300">
+                    <div class="text-gray-400 mb-2"><i class="fa-solid fa-clipboard-list text-4xl"></i></div>
+                    <p class="text-gray-500">Bu tarih için kayıt bulunamadı.</p>
+                </div>
+
+                <nav id="girdiler-sayfalama" class="flex justify-center mt-4"></nav>
+                
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mt-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-semibold text-gray-900">Haftalık Alım Özeti</h3>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="haftalikRaporGrafigi"></canvas>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-base font-semibold text-gray-900">Haftalık Alım Özeti</h3>
-            </div>
-            <div class="relative h-64 w-full">
-                <canvas id="haftalikRaporGrafigi"></canvas>
-            </div>
-        </div>
-
-        <div id="tanker-durum-container" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div id="tanker-durum-container" class="hidden bg-white rounded-xl shadow-sm border border-gray-200 p-4 mt-6">
              <h3 class="text-base font-semibold text-gray-900 mb-3">Tanker Doluluk Durumu</h3>
-             <div id="tanker-listesi-widget" class="space-y-3">
-                 </div>
+             <div id="tanker-listesi-widget" class="space-y-3"></div>
         </div>
-
+        {% endif %}
     </div>
 </main>
+
+<div id="duzenleModal" class="fixed inset-0 z-50 hidden" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="modalHandler.toggleModal('duzenleModal', false)"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6 transform transition-all">
+                <h3 class="text-lg font-bold text-gray-900 mb-4 border-b pb-2">Girdiyi Düzenle</h3>
+                <input type="hidden" id="edit-girdi-id">
+                <div class="space-y-4">
+                    <div><label class="block text-sm font-medium text-gray-700">Litre</label><input type="number" id="edit-litre-input" step="0.1" class="block w-full border-gray-300 rounded-lg p-2.5 focus:ring-brand-500 focus:border-brand-500"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Fiyat</label><input type="number" id="edit-fiyat-input" step="0.01" class="block w-full border-gray-300 rounded-lg p-2.5 focus:ring-brand-500 focus:border-brand-500"></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Açıklama/Sebep</label><input type="text" id="edit-sebep-input" class="block w-full border-gray-300 rounded-lg p-2.5 focus:ring-brand-500 focus:border-brand-500"></div>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button onclick="modalHandler.toggleModal('duzenleModal', false)" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">İptal</button>
+                    <button onclick="modalHandler.sutGirdisiDuzenle()" class="px-4 py-2 bg-brand-600 text-white rounded-lg hover:bg-brand-700">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="silmeOnayModal" class="fixed inset-0 z-50 hidden" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="modalHandler.toggleModal('silmeOnayModal', false)"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6">
+                <div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
+                    <i class="fa-solid fa-trash-can text-red-600 text-xl"></i>
+                </div>
+                <h3 class="text-center text-lg font-semibold text-gray-900 mb-2">Silmek İstediğinize Emin misiniz?</h3>
+                <p class="text-center text-sm text-gray-500 mb-6">Bu işlem geri alınamaz ve kayıt kalıcı olarak silinir.</p>
+                <input type="hidden" id="silinecek-girdi-id">
+                <div class="flex justify-center gap-3">
+                    <button onclick="modalHandler.toggleModal('silmeOnayModal', false)" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">Vazgeç</button>
+                    <button onclick="modalHandler.sutGirdisiSil()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">Evet, Sil</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="gecmisModal" class="fixed inset-0 z-50 hidden" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="modalHandler.toggleModal('gecmisModal', false)"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-lg p-6">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 class="text-base font-semibold">İşlem Geçmişi</h3>
+                    <button onclick="modalHandler.toggleModal('gecmisModal', false)" class="text-gray-400 hover:text-gray-500"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="gecmis-modal-body" class="h-64 overflow-y-auto text-sm text-gray-600 space-y-2"></div>
+                <div class="mt-5 flex justify-end">
+                    <button onclick="modalHandler.toggleModal('gecmisModal', false)" class="px-3 py-2 border rounded-md">Kapat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="veriOnayModal" class="fixed inset-0 z-50 hidden" aria-modal="true">
+    <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onclick="modalHandler.toggleModal('veriOnayModal', false)"></div>
+    <div class="fixed inset-0 z-10 overflow-y-auto">
+        <div class="flex min-h-full items-center justify-center p-4">
+            <div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6">
+                <div class="flex items-center justify-center w-12 h-12 mx-auto bg-yellow-100 rounded-full mb-4">
+                    <i class="fa-solid fa-triangle-exclamation text-yellow-600 text-xl"></i>
+                </div>
+                <h3 class="text-center text-base font-semibold mb-2">Dikkat: Sıradışı Değer</h3>
+                <p class="text-center text-sm text-gray-500 mb-4" id="onay-mesaji">Bu değer üreticinin ortalamasından çok farklı.</p>
+                <div class="flex justify-end gap-2">
+                    <button onclick="modalHandler.toggleModal('veriOnayModal', false)" class="px-3 py-2 border rounded-md">Düzenle</button>
+                    <button id="onayla-ve-kaydet-btn" class="px-3 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700">Yine de Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<script src="{{ url_for('static', filename='js/utils.js') }}"></script>
-<script src="{{ url_for('static', filename='js/render-utils.js') }}"></script>
-<script src="{{ url_for('static', filename='js/api.js') }}"></script>
-<script src="{{ url_for('static', filename='js/store.js') }}"></script>
-<script src="{{ url_for('static', filename='js/ui.js') }}"></script>
-<script src="{{ url_for('static', filename='js/data-loader.js') }}"></script>
-<script src="{{ url_for('static', filename='js/chart-manager.js') }}"></script>
-<script src="{{ url_for('static', filename='js/charts.js') }}"></script>
-
 <script>
     document.addEventListener('DOMContentLoaded', async () => {
         try {
-            // Verileri çek
-            await dataLoader.init();
+            // main.js zaten base.html üzerinden yükleniyor ve formu/listeyi yönetiyor.
+            // Biz burada sadece ek widget'ları (Grafik, Tanker, Tutar) yöneteceğiz.
+
+            // 1. dataLoader'ı başlat (Verilerin çekilmesini sağlar)
+            if(typeof dataLoader !== 'undefined') {
+                await dataLoader.init(); 
+            }
             
-            // Günlük Özeti Çek ve Bas
+            // 2. Günlük Özeti Çek ve Ek Göstergeleri Bas
             const bugun = new Date().toISOString().split('T')[0];
             const ozet = await api.fetchGunlukOzet(bugun);
             
             if(ozet) {
-                document.getElementById('gunluk-toplam-litre').textContent = utils.formatNumber(ozet.toplam_litre);
-                document.getElementById('gunluk-toplam-tutar').textContent = utils.formatCurrency(ozet.toplam_tutar || 0);
+                // Not: 'toplam-litre-panel' zaten main.js tarafından güncelleniyor olabilir ama garanti olsun.
+                if(document.getElementById('toplam-litre-panel')) {
+                    document.getElementById('toplam-litre-panel').textContent = utils.formatNumber(ozet.toplam_litre);
+                }
+                // Tutar alanı yeni eklendiği için bunu biz güncelliyoruz
+                if(document.getElementById('gunluk-toplam-tutar')) {
+                    document.getElementById('gunluk-toplam-tutar').textContent = utils.formatCurrency(ozet.toplam_tutar || 0);
+                }
             }
 
-            // Grafiği Çiz
-            if(typeof charts.haftalikGrafigiOlustur === 'function') {
+            // 3. Grafiği Çiz
+            if(typeof charts !== 'undefined' && typeof charts.haftalikGrafigiOlustur === 'function') {
                 charts.haftalikGrafigiOlustur();
             }
 
-            // Tanker Widget'ı
+            // 4. Tanker Widget'ı
             const tankers = await store.getTankers();
             if(tankers && tankers.length > 0) {
                 document.getElementById('tanker-durum-container').classList.remove('hidden');
@@ -144,7 +287,7 @@
             }
 
         } catch (e) {
-            console.error("Panel yükleme hatası:", e);
+            console.error("Panel ek widget yükleme hatası:", e);
         }
     });
 </script>

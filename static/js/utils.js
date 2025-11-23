@@ -5,6 +5,42 @@
 
 const utils = {
     /**
+     * Sayıyı formatlar (Binlik ayracı ve ondalık hane).
+     * Örnek: 1234.5 -> "1.234,50"
+     * @param {number} number - Formatlanacak sayı.
+     * @param {number} decimals - Ondalık basamak sayısı (Varsayılan: 2).
+     * @returns {string}
+     */
+    formatNumber(number, decimals = 2) {
+        if (number === null || number === undefined || isNaN(number)) {
+            return '0';
+        }
+        // Sayıya çevir (string gelme ihtimaline karşı)
+        const val = parseFloat(number);
+        return new Intl.NumberFormat('tr-TR', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        }).format(val);
+    },
+
+    /**
+     * Para birimi formatlar (TL).
+     * Örnek: 1500 -> "₺1.500,00"
+     * @param {number} amount - Tutar.
+     * @returns {string}
+     */
+    formatCurrency(amount) {
+        if (amount === null || amount === undefined || isNaN(amount)) {
+            return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY' }).format(0);
+        }
+        const val = parseFloat(amount);
+        return new Intl.NumberFormat('tr-TR', {
+            style: 'currency',
+            currency: 'TRY'
+        }).format(val);
+    },
+
+    /**
      * JavaScript Date nesnesini 'YYYY-MM-DD' formatında bir string'e çevirir.
      * @param {Date} date - Formatlanacak tarih nesnesi. Varsayılan: şimdi.
      * @returns {string}
@@ -17,8 +53,7 @@ const utils = {
     },
 
     /**
-     * YENİ: innerHTML'e eklenecek metinleri güvenli hale getirir.
-     * Bu, XSS saldırılarına karşı bir önlemdir.
+     * innerHTML'e eklenecek metinleri güvenli hale getirir (XSS Koruması).
      * @param {string} str - Temizlenecek metin.
      * @returns {string} - HTML etiketlerinden arındırılmış güvenli metin.
      */
@@ -32,6 +67,7 @@ const utils = {
     }
 };
 
+// --- GLOBAL FONKSİYONLAR ---
 
 /**
  * Hem yerel kullanıcı verisini siler hem de sunucudan çıkış yapar.
@@ -40,19 +76,16 @@ function guvenliCikis() {
     console.log("Güvenli Çıkış yapılıyor...");
     // 1. Yerel depolamayı temizle
     localStorage.removeItem('offlineUser');
-    console.log("localStorage['offlineUser'] temizlendi.");
-
+    
     // 2. Global değişkenleri sıfırla (varsa)
     if (typeof kullaniciRolu !== 'undefined') {
         kullaniciRolu = null;
-        console.log("Global 'kullaniciRolu' sıfırlandı.");
     }
-     // window altındaki değişkenleri de sıfırlayalım (ihtiyaç olursa)
-     window.anaPanelMevcutGorunum = 'liste';
-     window.anaPanelMevcutSayfa = 1;
+    // window altındaki değişkenleri de sıfırlayalım (ihtiyaç olursa)
+    if (window.anaPanelMevcutGorunum) window.anaPanelMevcutGorunum = 'liste';
+    if (window.anaPanelMevcutSayfa) window.anaPanelMevcutSayfa = 1;
 
     // 3. Backend logout endpoint'ine yönlendir
-    console.log("'/logout' adresine yönlendiriliyor.");
     window.location.href = '/logout';
 }
 
@@ -64,15 +97,22 @@ document.addEventListener('DOMContentLoaded', () => {
  * Uygulama sürümünü kontrol eder ve yeni bir sürüm varsa kullanıcıya bir defalık bildirim gösterir.
  */
 function yeniOzellikBildirimiKontrolEt() {
-    const mevcutVersiyon = document.body.dataset.appVersion;
-    if (!mevcutVersiyon) return;
+    const appBody = document.querySelector('body[data-app-version]');
+    if (!appBody) return;
+
+    const mevcutVersiyon = appBody.dataset.appVersion;
     const kullanicininGorduguVersiyon = localStorage.getItem('sutaski_app_version');
-    if (mevcutVersiyon !== kullanicininGorduguVersiyon) {
-        const mesaj = `
-            <strong>Uygulama güncellendi!</strong> Sürüm ${mevcutVersiyon}'a hoş geldiniz.
-            <a href="#" class="alert-link" data-bs-toggle="modal" data-bs-target="#hakkindaModal">Yenilikleri görmek için tıklayın.</a>
-        `;
-        gosterMesaj(mesaj, 'info', 10000, true); // YENİ: allowHTML: true
+
+    if (mevcutVersiyon && mevcutVersiyon !== kullanicininGorduguVersiyon) {
+        // Eğer gosterMesaj fonksiyonu globalde tanımlıysa (ui.js yüklendiyse) kullan
+        if (typeof gosterMesaj === 'function') {
+            const mesaj = `
+                <strong>Uygulama güncellendi!</strong> Sürüm ${mevcutVersiyon}'a hoş geldiniz.
+                <a href="#" class="alert-link underline" onclick="toggleModal('hakkindaModal', true)">Yenilikleri görmek için tıklayın.</a>
+            `;
+            // 3. parametre süre, 4. parametre allowHTML (ui.js desteğine bağlı)
+            gosterMesaj(mesaj, 'info', 10000, true); 
+        }
         localStorage.setItem('sutaski_app_version', mevcutVersiyon);
     }
 }
@@ -111,17 +151,23 @@ function ayYilSecicileriniDoldur(aySeciciId, yilSeciciId) {
  */
 async function indirVeAc(url, buttonId, messages) {
     const button = document.getElementById(buttonId);
-    if (!button) {
-        console.error(`Buton bulunamadı: ${buttonId}`);
-        return;
+    let originalContent = '';
+    
+    if (button) {
+        originalContent = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> İşleniyor...`;
     }
-    const originalContent = button.innerHTML;
-
-    button.disabled = true;
-    button.innerHTML = `<span class="spinner-border spinner-border-sm"></span> İşleniyor...`;
 
     try {
-        const response = await fetch(url);
+        // Eğer token varsa header'a ekleyelim (api.js'deki yapıya benzer)
+        const headers = {};
+        /* Not: Normalde api.request kullanılır ama blob dönüşü gerektiği için
+           manuel fetch yapıyoruz. Auth token gerekirse buraya eklenmeli.
+        */
+
+        const response = await fetch(url, { headers });
+        
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: messages.error }));
             throw new Error(errorData.error || messages.error);
@@ -140,23 +186,37 @@ async function indirVeAc(url, buttonId, messages) {
         const blob = await response.blob();
         const objectUrl = window.URL.createObjectURL(blob);
         
-        window.open(objectUrl, '_blank');
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = objectUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
+        // Yeni sekmede açmayı dene
+        const newWindow = window.open(objectUrl, '_blank');
         
-        a.remove();
-        setTimeout(() => window.URL.revokeObjectURL(objectUrl), 100);
+        // Eğer popup engelleyici varsa veya kullanıcı indirmek istiyorsa
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+             const a = document.createElement('a');
+             a.style.display = 'none';
+             a.href = objectUrl;
+             a.download = filename;
+             document.body.appendChild(a);
+             a.click();
+             a.remove();
+        }
         
-        gosterMesaj(messages.success, "success");
+        setTimeout(() => window.URL.revokeObjectURL(objectUrl), 10000); // 10sn sonra temizle
+        
+        if (typeof gosterMesaj === 'function') {
+            gosterMesaj(messages.success, "success");
+        }
 
     } catch (error) {
-        gosterMesaj(error.message, "danger");
+        console.error("PDF İndirme Hatası:", error);
+        if (typeof gosterMesaj === 'function') {
+            gosterMesaj(error.message, "danger");
+        } else {
+            alert(error.message);
+        }
     } finally {
-        button.disabled = false;
-        button.innerHTML = originalContent;
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = originalContent;
+        }
     }
 }
