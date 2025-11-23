@@ -59,7 +59,7 @@
             {% endif %}
 
             <div class="py-1" role="none">
-                <!-- DÜZELTİLDİ: openGlobalHakkinda() fonksiyonuna yönlendirildi -->
+                <!-- ÖNEMLİ: onclick="openGlobalHakkinda()" kullanıldı -->
                 <button type="button" class="w-full text-left text-gray-700 hover:bg-gray-50 hover:text-brand-600 group flex items-center px-4 py-2 text-sm" onclick="openGlobalHakkinda()">
                     <i class="fa-solid fa-circle-info w-5 text-center mr-2 text-gray-400 group-hover:text-brand-500"></i> Uygulama Hakkında
                 </button>
@@ -116,13 +116,13 @@
         }
     });
 
-    // Güvenli Çıkış Fonksiyonu (Eğer utils.js yüklenmediyse diye buraya da ekledik)
+    // Güvenli Çıkış Fonksiyonu
     function guvenliCikis() {
         localStorage.removeItem('offlineUser');
         window.location.href = "{{ url_for('auth.logout') }}";
     }
     
-    // Bildirim İzni (Yedek)
+    // Bildirim İzni
     function askForNotificationPermission() {
         if ('Notification' in window) {
             Notification.requestPermission().then(permission => {
@@ -133,23 +133,5 @@
         } else {
             alert("Tarayıcınız bildirimleri desteklemiyor.");
         }
-    }
-    
-    // Modal Açma (Yedek)
-    // Eğer toggleModal fonksiyonu globalde yoksa (ui.js yüklenmediyse), basit bir versiyonunu ekle
-    if (typeof toggleModal === 'undefined') {
-        window.toggleModal = function(modalId, show) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                if (show) modal.classList.remove('hidden');
-                else modal.classList.add('hidden');
-            } else {
-                console.warn('Modal bulunamadı:', modalId);
-                // base.html içinde tanımlı olduğunu varsayarak uyarı verelim
-                if(modalId === 'hakkindaModal') {
-                    alert('Hakkında penceresi yüklenemedi. Lütfen sayfayı yenileyin.');
-                }
-            }
-        };
     }
 </script>

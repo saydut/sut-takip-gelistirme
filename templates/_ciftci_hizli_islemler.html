@@ -8,7 +8,7 @@
     
     <div id="ciftci-islemler-menu" class="hidden absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl ring-1 ring-black ring-opacity-5 z-50 origin-top-right divide-y divide-gray-100">
         <div class="py-1">
-            <!-- DÜZELTİLDİ: openGlobalHakkinda() kullanıldı -->
+            <!-- DÜZELTME: openGlobalHakkinda() kullanıldı -->
             <a href="#" onclick="openGlobalHakkinda()" class="group flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-brand-50 hover:text-brand-700 transition-colors">
                 <i class="fa-solid fa-circle-info mr-3 text-gray-400 group-hover:text-brand-500 w-5 text-center"></i> Hakkında
             </a>
@@ -39,7 +39,6 @@
     window.onclick = function(event) {
         if (!event.target.matches('#ciftci-islemler-dropdown button') && !event.target.matches('#ciftci-islemler-dropdown button *')) {
             const dropdowns = document.getElementsByClassName("hidden");
-            // Burada sadece spesifik ID'yi kapatmak daha güvenli
             const menu = document.getElementById('ciftci-islemler-menu');
             if (menu && !menu.classList.contains('hidden')) {
                 menu.classList.add('hidden');
