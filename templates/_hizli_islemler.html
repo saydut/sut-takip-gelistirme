@@ -2,17 +2,14 @@
 
 <div class="flex items-center space-x-2">
 
-    {% if request.endpoint != 'main.panel' %}
-    <a href="{{ url_for('main.panel') }}" class="hidden md:inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors">
-        <i class="fa-solid fa-house mr-2"></i> Ana Panele Dön
-    </a>
-    {% endif %}
+    <!-- "Ana Panele Dön" butonu kaldırıldı -->
 
     <div class="relative inline-block text-left" id="hizli-islem-container">
         <div>
-            <button type="button" onclick="toggleHizliIslemMenu()" class="inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-brand-600 text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors" id="menu-button" aria-expanded="true" aria-haspopup="true">
-                <i class="fa-solid fa-bolt mr-2"></i> <span class="hidden sm:inline">Hızlı İşlemler</span>
-                <i class="fa-solid fa-chevron-down ml-2 -mr-1"></i>
+            <!-- DÜZELTME: "Hızlı İşlemler" yazısı kaldırıldı, sadece ikon kaldı -->
+            <button type="button" onclick="toggleHizliIslemMenu()" class="inline-flex justify-center items-center w-full rounded-md border border-transparent shadow-sm px-3 py-2 bg-brand-600 text-sm font-medium text-white hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 transition-colors" id="menu-button" aria-expanded="true" aria-haspopup="true">
+                <i class="fa-solid fa-bolt text-lg"></i>
+                <i class="fa-solid fa-chevron-down ml-2 text-xs"></i>
             </button>
         </div>
 
@@ -59,7 +56,7 @@
             {% endif %}
 
             <div class="py-1" role="none">
-                <!-- ÖNEMLİ: onclick="openGlobalHakkinda()" kullanıldı -->
+                <!-- DÜZELTME: type="button" eklendi ki form submit sanmasın -->
                 <button type="button" class="w-full text-left text-gray-700 hover:bg-gray-50 hover:text-brand-600 group flex items-center px-4 py-2 text-sm" onclick="openGlobalHakkinda()">
                     <i class="fa-solid fa-circle-info w-5 text-center mr-2 text-gray-400 group-hover:text-brand-500"></i> Uygulama Hakkında
                 </button>
@@ -110,7 +107,7 @@
     window.addEventListener('click', function(e) {
         const container = document.getElementById('hizli-islem-container');
         const menu = document.getElementById('hizli-islem-menu');
-        // Butona tıklanmadıysa kapat (e.target, butonu da içeriyorsa kapatma)
+        // Butona tıklanmadıysa kapat
         if (container && !container.contains(e.target) && menu && !menu.classList.contains('hidden')) {
             menu.classList.add('hidden');
         }

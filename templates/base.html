@@ -67,7 +67,7 @@
 
     <!-- Mobil Alt Menü -->
     {% if session.get('user') and session.get('user', {}).get('rol') != 'ciftci' %}
-    <nav class="fixed bottom-0 left-0 z-[9999] w-full h-16 bg-white border-t border-gray-200 block md:hidden pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+    <nav class="fixed bottom-0 left-0 z-[50] w-full h-16 bg-white border-t border-gray-200 block md:hidden pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
         <div class="grid h-full grid-cols-5 mx-auto font-medium">
             <a href="{{ url_for('main.panel') }}" class="bottom-nav-link inline-flex flex-col items-center justify-center px-2 hover:bg-gray-50 group text-gray-500 transition-colors" data-page="panel">
                 <i class="fa-solid fa-house text-xl mb-1 group-[.active]:text-brand-600"></i>
@@ -99,12 +99,12 @@
     </nav>
     {% endif %}
 
-    <!-- GLOBAL HAKKINDA MODAL (YENİ VE DETAYLI TASARIM) -->
-    <div id="global-hakkinda-modal" class="fixed inset-0 z-[100] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <!-- GLOBAL HAKKINDA MODAL (GÜNCELLENMİŞ Z-INDEX: 9999) -->
+    <div id="global-hakkinda-modal" class="fixed inset-0 z-[9999] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <!-- Arkaplan Karartma -->
         <div class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity" onclick="closeGlobalHakkinda()"></div>
 
-        <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+        <div class="fixed inset-0 z-[10000] w-screen overflow-y-auto">
             <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
                 <!-- Modal İçeriği -->
                 <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
@@ -125,7 +125,7 @@
                         </div>
                         
                         <!-- Kapatma Butonu -->
-                        <button type="button" onclick="closeGlobalHakkinda()" class="absolute top-4 right-4 text-white/70 hover:text-white transition-colors bg-black/10 hover:bg-black/20 rounded-full p-2 w-8 h-8 flex items-center justify-center">
+                        <button type="button" onclick="closeGlobalHakkinda()" class="absolute top-4 right-4 text-white/70 hover:text-white transition-colors bg-black/10 hover:bg-black/20 rounded-full p-2 w-8 h-8 flex items-center justify-center cursor-pointer z-20">
                             <i class="fa-solid fa-xmark text-lg"></i>
                         </button>
                     </div>
@@ -137,7 +137,7 @@
                             <!-- Versiyon Bilgisi -->
                             <div class="text-center">
                                 <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 mb-3">
-                                    Sürüm v{{ APP_VERSION }} (Beta)
+                                    Sürüm v{{ APP_VERSION }}
                                 </span>
                                 <p class="text-sm text-gray-500 leading-relaxed">
                                     Süt toplama süreçlerinizi dijitalleştirin, finansal takibinizi kolaylaştırın ve verimliliğinizi artırın.
@@ -198,7 +198,7 @@
         </div>
     </div>
 
-    <!-- Şifre Değiştir Modal (Mevcut yapıyı koruduk) -->
+    <!-- Şifre Değiştir Modal -->
     <div id="sifreDegistirModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="toggleModal('sifreDegistirModal', false)"></div>
         <div class="fixed inset-0 z-10 overflow-y-auto">
@@ -231,6 +231,7 @@
     </div>
 
     <!-- Global Fonksiyonlar ve Modal JS -->
+    <!-- KRİTİK DÜZELTME: openGlobalHakkinda artık en dışta tanımlanıyor -->
     <script>
         // Temel Modal Toggle
         function toggleModal(modalId, show) {
@@ -243,6 +244,7 @@
 
         // GLOBAL: Hakkında Modalı Açma/Kapama (Window nesnesine ekliyoruz)
         window.openGlobalHakkinda = function() {
+            console.log("Hakkında açılıyor...");
             const modal = document.getElementById('global-hakkinda-modal');
             if (modal) {
                 modal.classList.remove('hidden');
