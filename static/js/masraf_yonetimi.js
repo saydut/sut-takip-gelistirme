@@ -1,4 +1,4 @@
-// static/js/masraf_yonetimi.js (KATEGORİ DÜZELTMESİ)
+// static/js/masraf_yonetimi.js (KATEGORİ VE TARİH DÜZELTMESİ)
 
 let tarihPicker;
 
@@ -6,6 +6,8 @@ async function verileriYukle() {
     const tbody = document.getElementById('masraflar-tablosu');
     const veriYok = document.getElementById('veri-yok-mesaji');
     
+    if (!tbody) return;
+
     tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4"><i class="fa-solid fa-circle-notch fa-spin text-gray-400"></i></td></tr>';
 
     try {
@@ -20,9 +22,10 @@ async function verileriYukle() {
         if(veriYok) veriYok.classList.add('hidden');
 
         data.masraflar.forEach(m => {
-            const tarih = new Date(m.tarih).toLocaleDateString('tr-TR');
-            // DÜZELTME: Hem ad hem kategori_adi kontrolü
-            const kat = m.kategori ? utils.sanitizeHTML(m.kategori.ad || m.kategori.kategori_adi) : '-';
+            // DÜZELTME: Veritabanından 'masraf_tarihi' olarak geliyor
+            const tarih = new Date(m.masraf_tarihi).toLocaleDateString('tr-TR');
+            
+            const kat = m.masraf_kategorileri ? utils.sanitizeHTML(m.masraf_kategorileri.kategori_adi) : '-';
             
             tbody.innerHTML += `
             <tr class="hover:bg-gray-50 transition-colors border-b border-gray-100">
@@ -44,14 +47,15 @@ async function verileriYukle() {
 async function kategorileriDoldur() {
     const select = document.getElementById('masraf-kategori-sec');
     const list = document.getElementById('kategori-listesi');
+    if (!select || !list) return;
+
     try {
         const data = await api.fetchMasrafKategorileri();
         select.innerHTML = '';
         list.innerHTML = '';
         
         data.forEach(k => {
-            // DÜZELTME: İsim kontrolü
-            const isim = utils.sanitizeHTML(k.ad || k.kategori_adi);
+            const isim = utils.sanitizeHTML(k.kategori_adi);
             
             const opt = document.createElement('option');
             opt.value = k.id;
@@ -71,51 +75,68 @@ async function kategoriEkle() {
     const ad = document.getElementById('yeni-kategori-ad').value.trim();
     if(!ad) return;
     try {
-        // DÜZELTME: Backend'e garanti olsun diye iki türlü de gönderiyoruz
-        await api.postMasrafKategorisi({ ad: ad, kategori_adi: ad });
+        await api.postMasrafKategorisi({ kategori_adi: ad });
         document.getElementById('yeni-kategori-ad').value = '';
         kategorileriDoldur(); 
         gosterMesaj('Kategori eklendi.', 'success');
     } catch(e) { gosterMesaj(e.message, 'danger'); }
 }
 
-// ... (Diğer fonksiyonlar aynı kalabilir: masrafEkle, silmeOnayiAc, masrafSil, kategoriSil)
-
 async function masrafEkle(e) {
     e.preventDefault();
     const btn = document.getElementById('kaydet-btn');
     const original = btn.innerHTML;
+    
+    // DÜZELTME: Backend 'masraf_tarihi' bekliyor, 'tarih' değil.
     const veri = {
         kategori_id: document.getElementById('masraf-kategori-sec').value,
         tutar: document.getElementById('masraf-tutar').value,
-        tarih: document.getElementById('masraf-tarih').value,
+        masraf_tarihi: document.getElementById('masraf-tarih').value, 
         aciklama: document.getElementById('masraf-aciklama').value.trim()
     };
+
     if (!veri.kategori_id || !veri.tutar) { gosterMesaj('Kategori ve Tutar zorunlu.', 'warning'); return; }
+    
     btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
+    
     try {
         await api.postMasraf(veri);
         gosterMesaj('Masraf kaydedildi.', 'success');
         document.getElementById('masraf-form').reset();
         if(tarihPicker) tarihPicker.setDate(new Date());
         verileriYukle();
-    } catch(err) { gosterMesaj(err.message, 'danger'); }
-    finally { btn.disabled = false; btn.innerHTML = original; }
+    } catch(err) { 
+        gosterMesaj(err.message, 'danger'); 
+    } finally { 
+        btn.disabled = false; btn.innerHTML = original; 
+    }
 }
 
 function silmeOnayiAc(id) { document.getElementById('silinecek-masraf-id').value = id; toggleModal('silmeOnayModal', true); }
+
 async function masrafSil() {
     const id = document.getElementById('silinecek-masraf-id').value;
     toggleModal('silmeOnayModal', false);
     try { await api.deleteMasraf(id); gosterMesaj('Masraf silindi.', 'success'); verileriYukle(); } 
     catch(e) { gosterMesaj(e.message, 'danger'); }
 }
+
 function kategoriModalAc() { toggleModal('kategoriModal', true); }
-async function kategoriSil(id) { if(!confirm("Kategori silinsin mi?")) return; try { await api.deleteMasrafKategorisi(id); kategorileriDoldur(); } catch(e) { gosterMesaj('Bu kategori kullanımda olabilir.', 'danger'); } }
+
+async function kategoriSil(id) { 
+    if(!confirm("Kategori silinsin mi?")) return; 
+    try { await api.deleteMasrafKategorisi(id); kategorileriDoldur(); } 
+    catch(e) { gosterMesaj('Bu kategori kullanımda olabilir.', 'danger'); } 
+}
 
 window.onload = function() {
     const form = document.getElementById('masraf-form');
     if(form) form.addEventListener('submit', masrafEkle);
-    tarihPicker = flatpickr("#masraf-tarih", { dateFormat: "Y-m-d", locale: "tr", defaultDate: "today", allowInput: true });
+    
+    const tarihInput = document.getElementById('masraf-tarih');
+    if (tarihInput) {
+        tarihPicker = flatpickr(tarihInput, { dateFormat: "Y-m-d", locale: "tr", defaultDate: "today", allowInput: true });
+    }
+    
     verileriYukle();
 };
