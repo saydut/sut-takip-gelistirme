@@ -49,7 +49,13 @@ def get_gunluk_ozet():
 def get_haftalik_ozet():
     try:
         sirket_id = session['user']['sirket_id']
+        # SQL fonksiyonunu çağırıyoruz
         response = g.supabase.rpc('get_weekly_summary', {'p_sirket_id': sirket_id}).execute()
+        
+        # Veri dönmezse boş grafik gönder (Hata almamak için)
+        if not response.data:
+            return jsonify({'labels': [], 'data': []})
+            
         return jsonify(response.data)
     except Exception as e:
         logger.error(f"Haftalık özet (RPC) alınırken hata: {e}", exc_info=True)
