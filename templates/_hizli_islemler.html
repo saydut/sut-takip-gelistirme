@@ -1,3 +1,5 @@
+<!-- templates/_hizli_islemler.html -->
+
 <div class="flex items-center space-x-2">
 
     {% if request.endpoint != 'main.panel' %}
@@ -26,6 +28,11 @@
                 <a href="{{ url_for('main.tedarikciler_sayfasi') }}" class="text-gray-700 hover:bg-gray-50 hover:text-brand-600 group flex items-center px-4 py-2 text-sm" role="menuitem">
                     <i class="fa-solid fa-users w-5 text-center mr-2 text-gray-400 group-hover:text-brand-500"></i> Tedarikçi Yönetimi
                 </a>
+                
+                <a href="{{ url_for('tanker.tanker_yonetimi_sayfasi') }}" class="text-gray-700 hover:bg-gray-50 hover:text-brand-600 group flex items-center px-4 py-2 text-sm" role="menuitem">
+                    <i class="fa-solid fa-truck-droplet w-5 text-center mr-2 text-gray-400 group-hover:text-brand-500"></i> Tanker Yönetimi
+                </a>
+
                 <a href="{{ url_for('yem.yem_yonetimi_sayfasi') }}" class="text-gray-700 hover:bg-gray-50 hover:text-brand-600 group flex items-center px-4 py-2 text-sm" role="menuitem">
                     <i class="fa-solid fa-wheat-awn w-5 text-center mr-2 text-gray-400 group-hover:text-brand-500"></i> Yem Yönetimi
                 </a>
@@ -52,6 +59,7 @@
             {% endif %}
 
             <div class="py-1" role="none">
+                <!-- BURASI GÜNCELLENDİ: type="button" eklendi ve onclick netleştirildi -->
                 <button type="button" class="w-full text-left text-gray-700 hover:bg-gray-50 hover:text-brand-600 group flex items-center px-4 py-2 text-sm" onclick="toggleModal('hakkindaModal', true)">
                     <i class="fa-solid fa-circle-info w-5 text-center mr-2 text-gray-400 group-hover:text-brand-500"></i> Uygulama Hakkında
                 </button>
@@ -67,10 +75,10 @@
                 <a href="{{ url_for('profil.profil_sayfasi') }}" class="text-gray-700 hover:bg-gray-50 hover:text-brand-600 group flex items-center px-4 py-2 text-sm" role="menuitem">
                     <i class="fa-solid fa-user w-5 text-center mr-2 text-gray-400 group-hover:text-brand-500"></i> Profilim
                 </a>
-                <button type="button" class="w-full text-left text-gray-700 hover:bg-gray-50 hover:text-brand-600 group flex items-center px-4 py-2 text-sm" onclick="askForNotificationPermission()">
+                <button type="button" class="w-full text-left text-gray-700 hover:bg-gray-50 hover:text-brand-600 group flex items-center px-4 py-2 text-sm" onclick="if(typeof askForNotificationPermission === 'function') askForNotificationPermission()">
                     <i class="fa-solid fa-bell w-5 text-center mr-2 text-gray-400 group-hover:text-brand-500"></i> Bildirimleri Aç
                 </button>
-                <button type="button" class="w-full text-left text-red-600 hover:bg-red-50 hover:text-red-700 group flex items-center px-4 py-2 text-sm" onclick="guvenliCikis()">
+                <button type="button" class="w-full text-left text-red-600 hover:bg-red-50 hover:text-red-700 group flex items-center px-4 py-2 text-sm" onclick="if(typeof guvenliCikis === 'function') guvenliCikis()">
                     <i class="fa-solid fa-right-from-bracket w-5 text-center mr-2 text-red-400 group-hover:text-red-600"></i> Güvenli Çıkış
                 </button>
             </div>
@@ -102,21 +110,19 @@
     window.addEventListener('click', function(e) {
         const container = document.getElementById('hizli-islem-container');
         const menu = document.getElementById('hizli-islem-menu');
+        // Butona tıklanmadıysa kapat (e.target, butonu da içeriyorsa kapatma)
         if (container && !container.contains(e.target) && menu && !menu.classList.contains('hidden')) {
             menu.classList.add('hidden');
         }
     });
 
-    // Güvenli Çıkış
+    // Güvenli Çıkış Fonksiyonu (Eğer utils.js yüklenmediyse diye buraya da ekledik)
     function guvenliCikis() {
-        // Önce local verileri temizleyebiliriz (isteğe bağlı)
         localStorage.removeItem('offlineUser');
-        
-        // Logout endpointine git
         window.location.href = "{{ url_for('auth.logout') }}";
     }
-
-    // Bildirim İzni (Basit Versiyon)
+    
+    // Bildirim İzni (Yedek)
     function askForNotificationPermission() {
         if ('Notification' in window) {
             Notification.requestPermission().then(permission => {
@@ -127,5 +133,23 @@
         } else {
             alert("Tarayıcınız bildirimleri desteklemiyor.");
         }
+    }
+    
+    // Modal Açma (Yedek)
+    // Eğer toggleModal fonksiyonu globalde yoksa (ui.js yüklenmediyse), basit bir versiyonunu ekle
+    if (typeof toggleModal === 'undefined') {
+        window.toggleModal = function(modalId, show) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                if (show) modal.classList.remove('hidden');
+                else modal.classList.add('hidden');
+            } else {
+                console.warn('Modal bulunamadı:', modalId);
+                // base.html içinde tanımlı olduğunu varsayarak uyarı verelim
+                if(modalId === 'hakkindaModal') {
+                    alert('Hakkında penceresi yüklenemedi. Lütfen sayfayı yenileyin.');
+                }
+            }
+        };
     }
 </script>

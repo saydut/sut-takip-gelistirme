@@ -168,10 +168,12 @@ def delete_kullanici(kullanici_db_id):
 def get_kullanicilar_by_sirket_id(sirket_id):
     """
     Bir şirkete bağlı tüm kullanıcıları listeler.
+    Admin ve Firma Yetkilisi hariç diğer tüm rolleri döndürür.
     """
     try:
+        # Filtreleme: Admin ve Firma Yetkilisi hariç
         response = g.supabase.table('kullanicilar') \
-            .select('id, rol, kullanici_adi') \
+            .select('id, rol, kullanici_adi, created_at, eposta, telefon_no') \
             .eq('sirket_id', sirket_id) \
             .neq('rol', UserRole.FIRMA_YETKILISI.value) \
             .neq('rol', UserRole.ADMIN.value) \
@@ -183,8 +185,11 @@ def get_kullanicilar_by_sirket_id(sirket_id):
             formatted_data.append({
                 'id': user.get('id'),
                 'rol': user.get('rol'),
-                'isim': user.get('kullanici_adi'),
-                'kullanici_db_id': user.get('id')
+                'kullanici_adi': user.get('kullanici_adi'), # DÜZELTME: Frontend bu ismi bekliyor olabilir
+                'isim': user.get('kullanici_adi'), # Yedek olarak isim de kalsın
+                'eposta': user.get('eposta'),
+                'telefon_no': user.get('telefon_no'),
+                'created_at': user.get('created_at')
             })
             
         return formatted_data
@@ -196,7 +201,6 @@ def get_kullanicilar_by_sirket_id(sirket_id):
 def reset_kullanici_sifre(kullanici_id_to_reset, yeni_sifre_plain):
     """
     Firma yetkilisinin, kendi şirketindeki bir kullanıcının şifresini sıfırlamasını sağlar.
-    (Mevcut fonksiyon korunuyor)
     """
     try:
         istek_yapan_sirket_id = g.user.sirket_id
@@ -231,11 +235,8 @@ def reset_kullanici_sifre(kullanici_id_to_reset, yeni_sifre_plain):
         logger.error(f"Kullanıcı şifresi ayarlanırken hata: {e}", exc_info=True)
         raise Exception(f"Kullanıcı şifresi sıfırlanırken sunucu hatası: {str(e)}")
 
-# --- EKLENEN/DÜZELTİLEN FONKSİYONLAR ---
-
 def set_user_password(sirket_id, kullanici_id, yeni_sifre):
     """
-    Senaryo 9 hatasını çözen fonksiyon. 
     Firma yetkilisinin, alt kullanıcısının şifresini değiştirmesini sağlar.
     """
     try:
@@ -267,7 +268,6 @@ def set_user_password(sirket_id, kullanici_id, yeni_sifre):
 def get_kullanici_detaylari(sirket_id, kullanici_id):
     """
     Belirli bir kullanıcının detaylarını ve atanmış tedarikçilerini getirir.
-    (Tablo ismi hatası düzeltildi: toplayici_tedarikci_atama)
     """
     try:
         kullanici_res = g.supabase.table('kullanicilar') \
@@ -281,7 +281,7 @@ def get_kullanici_detaylari(sirket_id, kullanici_id):
         if not kullanici_data:
             return None
 
-        # DÜZELTME: Tablo ismi 'toplayici_tedarikci_atama' olarak güncellendi
+        # Tablo ismi 'toplayici_tedarikci_atama'
         atananlar_res = g.supabase.table('toplayici_tedarikci_atama') \
             .select('tedarikci_id') \
             .eq('toplayici_id', kullanici_id) \

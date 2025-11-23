@@ -11,11 +11,14 @@ let seciliToplayiciId = null;
 document.addEventListener('DOMContentLoaded', function() {
     
     // TomSelect Başlat
-    tankerAtamaSecici = new TomSelect("#tanker-atama-secici", {
-        create: false,
-        sortField: { field: "text", direction: "asc" },
-        placeholder: "Tanker seçin..."
-    });
+    const selectEl = document.getElementById("tanker-atama-secici");
+    if (selectEl) {
+        tankerAtamaSecici = new TomSelect(selectEl, {
+            create: false,
+            sortField: { field: "text", direction: "asc" },
+            placeholder: "Tanker seçin..."
+        });
+    }
     
     // Arama Dinleyicisi
     const aramaInput = document.getElementById('toplayici-arama-input');
@@ -28,7 +31,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Form Dinleyicisi
     const form = document.getElementById('yeni-tanker-form');
     if(form) {
-        form.addEventListener('submit', (e) => { e.preventDefault(); tankerEkle(); });
+        form.addEventListener('submit', (e) => { 
+            e.preventDefault(); 
+            tankerEkle(); 
+        });
+    }
+
+    // Satış Fiyatı Değiştiğinde Tutar Hesapla
+    const satisFiyatInput = document.getElementById('satis-fiyat-input');
+    if (satisFiyatInput) {
+        satisFiyatInput.addEventListener('input', hesaplaSatisTutari);
     }
 
     // İlk Yükleme
@@ -57,15 +69,19 @@ async function tankerleriYukle() {
 
     // Yükleniyor göstergesi (Tailwind)
     container.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500"><i class="fa-solid fa-circle-notch fa-spin text-brand-500 mr-2"></i> Yükleniyor...</div>';
-    veriYokMesaji.classList.add('hidden');
+    if (veriYokMesaji) veriYokMesaji.classList.add('hidden');
 
     try {
         // forceRefresh = true ile taze veri çek
-        tumTankerler = await store.getTankers(true); 
+        if (typeof store !== 'undefined' && store.getTankers) {
+            tumTankerler = await store.getTankers(true);
+        } else {
+            tumTankerler = await api.request('/tanker/api/listele');
+        }
 
         if (!tumTankerler || tumTankerler.length === 0) {
             container.innerHTML = '';
-            veriYokMesaji.classList.remove('hidden');
+            if (veriYokMesaji) veriYokMesaji.classList.remove('hidden');
             return;
         }
 
@@ -83,7 +99,7 @@ function renderTankerListesi(tankerler) {
     tankerler.forEach(tanker => {
         const kapasite = parseFloat(tanker.kapasite_litre);
         const doluluk = parseFloat(tanker.mevcut_doluluk);
-        const yuzde = Math.min(100, Math.max(0, parseInt(tanker.doluluk_yuzdesi || 0, 10)));
+        const yuzde = kapasite > 0 ? Math.min(100, Math.max(0, (doluluk / kapasite) * 100)) : 0;
         const safeTankerAdi = utils.sanitizeHTML(tanker.tanker_adi);
 
         // Renk belirleme (Tailwind)
@@ -91,6 +107,16 @@ function renderTankerListesi(tankerler) {
         let textClass = 'text-green-600';
         if (yuzde > 75) { colorClass = 'bg-yellow-500'; textClass = 'text-yellow-600'; }
         if (yuzde > 95) { colorClass = 'bg-red-500'; textClass = 'text-red-600'; }
+
+        // Satış Butonu Durumu (Boşsa pasif, doluysa aktif)
+        const isBos = doluluk <= 0;
+        const satisBtnClass = isBos 
+            ? 'bg-gray-50 text-gray-400 cursor-not-allowed' 
+            : 'bg-blue-50 text-blue-600 hover:bg-blue-100 cursor-pointer';
+        
+        const satisOnClick = isBos ? '' : `onclick="tankerSatisModaliniAc(${tanker.id}, '${safeTankerAdi.replace(/'/g, "\\'")}', ${doluluk})"`;
+        const satisBtnText = isBos ? 'Boş Tanker' : 'Satış/Boşaltma';
+        const satisIcon = isBos ? 'fa-ban' : 'fa-hand-holding-dollar';
 
         const cardHtml = `
             <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow" id="tanker-kart-${tanker.id}">
@@ -110,7 +136,7 @@ function renderTankerListesi(tankerler) {
                     
                     <div class="mb-2 flex justify-between items-end">
                         <span class="text-sm font-medium text-gray-600">Doluluk</span>
-                        <span class="text-sm font-bold ${textClass}">${doluluk.toFixed(0)} L (${yuzde}%)</span>
+                        <span class="text-sm font-bold ${textClass}">${doluluk.toFixed(0)} L (${yuzde.toFixed(0)}%)</span>
                     </div>
                     
                     <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
@@ -118,8 +144,8 @@ function renderTankerListesi(tankerler) {
                     </div>
                     
                     <div class="mt-5 pt-4 border-t border-gray-100">
-                        <button class="w-full py-2 px-3 bg-gray-50 text-gray-400 rounded-lg text-sm font-medium cursor-not-allowed flex justify-center items-center" disabled>
-                            <i class="fa-solid fa-lock mr-2"></i> Satış/Boşaltma (Yakında)
+                        <button class="w-full py-2 px-3 rounded-lg text-sm font-medium flex justify-center items-center transition-colors ${satisBtnClass}" ${satisOnClick} ${isBos ? 'disabled' : ''}>
+                            <i class="fa-solid ${satisIcon} mr-2"></i> ${satisBtnText}
                         </button>
                     </div>
                 </div>
@@ -140,12 +166,15 @@ async function tankerEkle() {
     const btn = document.getElementById('kaydet-tanker-btn');
     const originalText = btn.innerText;
 
+    const tankerAdiInput = document.getElementById('tanker-adi-input');
+    const kapasiteInput = document.getElementById('tanker-kapasite-input');
+
     const veri = {
-        tanker_adi: document.getElementById('tanker-adi-input').value.trim(),
-        kapasite: document.getElementById('tanker-kapasite-input').value
+        tanker_adi: tankerAdiInput.value.trim(),
+        kapasite_litre: kapasiteInput.value 
     };
 
-    if (!veri.tanker_adi || !veri.kapasite || parseFloat(veri.kapasite) <= 0) {
+    if (!veri.tanker_adi || !veri.kapasite_litre || parseFloat(veri.kapasite_litre) <= 0) {
         gosterMesaj('Lütfen geçerli bir ad ve kapasite girin.', 'warning');
         return;
     }
@@ -163,9 +192,11 @@ async function tankerEkle() {
         gosterMesaj(result.message, 'success');
         toggleModal('yeniTankerModal', false);
         
-        await store.getTankers(true); 
+        if (typeof store !== 'undefined' && store.getTankers) {
+             await store.getTankers(true); 
+        }
         await tankerleriYukle(); 
-        tumToplayicilar = []; // Atama listesini yenilemek için cache boz
+        tumToplayicilar = []; 
 
     } catch (error) {
         gosterMesaj(error.message, 'danger');
@@ -175,44 +206,112 @@ async function tankerEkle() {
     }
 }
 
+// --- SATIŞ İŞLEMLERİ (YENİ EKLENDİ) ---
+
+function tankerSatisModaliniAc(id, ad, miktar) {
+    document.getElementById('satis-tanker-id').value = id;
+    document.getElementById('satis-tanker-adi').textContent = ad;
+    document.getElementById('satis-miktar').textContent = miktar;
+    document.getElementById('satis-miktar').dataset.value = miktar; // Hesaplama için sakla
+    
+    document.getElementById('satis-fiyat-input').value = '';
+    document.getElementById('satis-toplam-tutar').value = '';
+    document.getElementById('satis-aciklama-input').value = '';
+    
+    toggleModal('tankerSatisModal', true);
+}
+
+function hesaplaSatisTutari() {
+    const miktar = parseFloat(document.getElementById('satis-miktar').dataset.value || 0);
+    const fiyat = parseFloat(document.getElementById('satis-fiyat-input').value || 0);
+    const toplamEl = document.getElementById('satis-toplam-tutar');
+    
+    if (miktar > 0 && fiyat > 0) {
+        const toplam = (miktar * fiyat).toFixed(2);
+        toplamEl.value = `${toplam} TL`;
+    } else {
+        toplamEl.value = '';
+    }
+}
+
+async function tankerSatisiniTamamla() {
+    const id = document.getElementById('satis-tanker-id').value;
+    const fiyat = document.getElementById('satis-fiyat-input').value;
+    const aciklama = document.getElementById('satis-aciklama-input').value;
+    
+    if (!fiyat || parseFloat(fiyat) <= 0) {
+        gosterMesaj('Lütfen geçerli bir satış fiyatı girin.', 'warning');
+        return;
+    }
+
+    // Butonu kilitleme vs. eklenebilir (Basitlik için atlandı)
+    
+    try {
+        const result = await api.request(`/tanker/api/sat_ve_bosalt/${id}`, {
+            method: 'POST',
+            body: JSON.stringify({ 
+                birim_fiyat: parseFloat(fiyat), 
+                aciklama: aciklama 
+            }),
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        gosterMesaj(result.message, 'success');
+        toggleModal('tankerSatisModal', false);
+        
+        // Listeleri güncelle
+        if (typeof store !== 'undefined' && store.getTankers) {
+             await store.getTankers(true); 
+        }
+        await tankerleriYukle();
+        
+    } catch (error) {
+        gosterMesaj(error.message, 'danger');
+    }
+}
+
 // --- ATAMA İŞLEMLERİ ---
 
 async function loadAtamaSekmesi() {
     const listeContainer = document.getElementById('toplayici-atama-listesi');
     const veriYokMesaji = document.getElementById('toplayici-veri-yok');
     
+    if (!listeContainer) return;
+
     listeContainer.innerHTML = '<div class="text-center py-8 text-gray-500"><i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Yükleniyor...</div>';
-    veriYokMesaji.classList.add('hidden');
+    if (veriYokMesaji) veriYokMesaji.classList.add('hidden');
 
     try {
-        const [toplayicilar, tankerler] = await Promise.all([
-            api.request('/tanker/api/atamalar').then(res => res.toplayicilar), // API yapısı biraz farklı olabilir, kontrol edilmeli
-            store.getTankers(true)
-        ]);
-        
-        // Not: Backend'de '/tanker/api/atamalar' endpointi hem atamaları hem toplayıcıları dönüyor (msg 66).
-        // Ama biz burada basitleştirmek için toplayıcıları ayrı, atamaları ayrı işleyebiliriz.
-        // Şimdilik var olan API yapısına sadık kalalım:
-        // '/tanker/api/atamalar' -> { atamalar: [...], toplayicilar: [...] }
+        let tankerler;
+        if (typeof store !== 'undefined' && store.getTankers) {
+            tankerler = await store.getTankers(true);
+        } else {
+            tankerler = await api.request('/tanker/api/listele');
+        }
         
         const response = await api.request('/tanker/api/atamalar');
         const atamalar = response.atamalar || [];
         const rawToplayicilar = response.toplayicilar || [];
         tumTankerler = tankerler || []; 
 
-        // Toplayıcı listesi ile atamaları birleştir
         tumToplayicilar = rawToplayicilar.map(t => {
             const atama = atamalar.find(a => a.toplayici_user_id === t.id);
+            let atananTankerAdi = 'Atanmamış';
+            if (atama && atama.tanker_id) {
+                 const tnk = tumTankerler.find(x => x.id === atama.tanker_id);
+                 if (tnk) atananTankerAdi = tnk.tanker_adi;
+            }
+
             return {
                 ...t,
                 atanan_tanker_id: atama ? atama.tanker_id : null,
-                atanan_tanker_adi: atama && atama.tankerler ? atama.tankerler.tanker_adi : null
+                atanan_tanker_adi: atananTankerAdi
             };
         });
 
         if (tumToplayicilar.length === 0) {
             listeContainer.innerHTML = '';
-            veriYokMesaji.classList.remove('hidden');
+            if (veriYokMesaji) veriYokMesaji.classList.remove('hidden');
         } else {
             renderToplayiciListesi(tumToplayicilar);
         }
@@ -240,7 +339,6 @@ function renderToplayiciListesi(toplayicilar, filtre = '') {
         const tankerId = t.atanan_tanker_id || 0;
         const badgeColor = t.atanan_tanker_id ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-600 border-gray-200';
         
-        // Aktif seçim kontrolü
         const isActive = seciliToplayiciId == t.id ? 'bg-brand-50 border-brand-200 ring-1 ring-brand-200' : 'hover:bg-gray-50 border-transparent';
 
         container.innerHTML += `
@@ -258,6 +356,8 @@ function renderToplayiciListesi(toplayicilar, filtre = '') {
 }
 
 function renderTankerSecici(tankerler) {
+    if (!tankerAtamaSecici) return;
+
     tankerAtamaSecici.clear();
     tankerAtamaSecici.clearOptions();
     tankerAtamaSecici.addOption({ value: 0, text: "--- Tanker Atanmamış ---" });
@@ -273,7 +373,6 @@ function renderTankerSecici(tankerler) {
 function atamaIcinToplayiciSec(el, id, ad, tankerId) {
     seciliToplayiciId = id;
     
-    // Görsel güncelleme
     const list = document.getElementById('toplayici-atama-listesi');
     Array.from(list.children).forEach(child => {
         child.classList.remove('bg-brand-50', 'border-brand-200', 'ring-1', 'ring-brand-200');
@@ -282,27 +381,35 @@ function atamaIcinToplayiciSec(el, id, ad, tankerId) {
     el.classList.remove('border-transparent');
     el.classList.add('bg-brand-50', 'border-brand-200', 'ring-1', 'ring-brand-200');
 
-    // Sağ paneli güncelle
-    document.getElementById('atama-paneli-secim-bekliyor').style.display = 'none';
-    document.getElementById('atama-paneli-sag').style.display = 'block';
+    const panelBekliyor = document.getElementById('atama-paneli-secim-bekliyor');
+    const panelSag = document.getElementById('atama-paneli-sag');
     
-    document.getElementById('atama-toplayici-adi').innerText = ad;
-    document.getElementById('atanacak-toplayici-id').value = id;
-    tankerAtamaSecici.setValue(tankerId || 0);
+    if (panelBekliyor) panelBekliyor.style.display = 'none';
+    if (panelSag) panelSag.style.display = 'block';
+    
+    const adEl = document.getElementById('atama-toplayici-adi');
+    const idEl = document.getElementById('atanacak-toplayici-id');
+    
+    if (adEl) adEl.innerText = ad;
+    if (idEl) idEl.value = id;
+    
+    if (tankerAtamaSecici) tankerAtamaSecici.setValue(tankerId || 0);
 }
 
 async function tankerAta() {
     const toplayiciId = document.getElementById('atanacak-toplayici-id').value;
-    const tankerId = tankerAtamaSecici.getValue();
+    const tankerId = tankerAtamaSecici ? tankerAtamaSecici.getValue() : null;
     const btn = document.getElementById('atama-kaydet-btn');
-    const original = btn.innerText;
+    const original = btn ? btn.innerText : 'Kaydet';
 
     if (!toplayiciId) return;
 
-    btn.disabled = true; btn.innerText = 'Kaydediliyor...';
+    if (btn) {
+        btn.disabled = true; 
+        btn.innerText = 'Kaydediliyor...';
+    }
 
     try {
-        // API endpoint'i (daha önce oluşturduğumuz)
         await api.request('/tanker/api/ata', {
             method: 'POST',
             body: JSON.stringify({ toplayici_id: parseInt(toplayiciId), tanker_id: parseInt(tankerId) }),
@@ -311,7 +418,6 @@ async function tankerAta() {
 
         gosterMesaj('Atama başarıyla güncellendi.', 'success');
         
-        // Listeyi yerel olarak güncelle (Tekrar API çağrısı yapmadan)
         const index = tumToplayicilar.findIndex(t => t.id == toplayiciId);
         if (index !== -1) {
             tumToplayicilar[index].atanan_tanker_id = parseInt(tankerId) || null;
@@ -319,22 +425,28 @@ async function tankerAta() {
             tumToplayicilar[index].atanan_tanker_adi = tnk ? tnk.tanker_adi : 'Atanmamış';
         }
         
-        renderToplayiciListesi(tumToplayicilar, document.getElementById('toplayici-arama-input').value);
+        const aramaInput = document.getElementById('toplayici-arama-input');
+        renderToplayiciListesi(tumToplayicilar, aramaInput ? aramaInput.value : '');
         
-        // Paneli sıfırla
-        document.getElementById('atama-paneli-secim-bekliyor').style.display = 'block';
-        document.getElementById('atama-paneli-sag').style.display = 'none';
+        const panelBekliyor = document.getElementById('atama-paneli-secim-bekliyor');
+        const panelSag = document.getElementById('atama-paneli-sag');
+        if (panelBekliyor) panelBekliyor.style.display = 'block';
+        if (panelSag) panelSag.style.display = 'none';
+        
         seciliToplayiciId = null;
 
     } catch (e) {
         gosterMesaj(e.message, 'danger');
     } finally {
-        btn.disabled = false; btn.innerText = original;
+        if (btn) {
+            btn.disabled = false; 
+            btn.innerText = original;
+        }
     }
 }
 
 function atamaKaldir() {
-    tankerAtamaSecici.setValue(0);
+    if (tankerAtamaSecici) tankerAtamaSecici.setValue(0);
     tankerAta();
 }
 
@@ -351,14 +463,30 @@ async function tankerSil(id) {
         await api.request(`/tanker/api/sil/${id}`, { method: 'DELETE' });
         gosterMesaj('Tanker silindi.', 'success');
         
-        // Cache temizle ve yenile
-        await store.getTankers(true);
+        if (typeof store !== 'undefined' && store.getTankers) {
+             await store.getTankers(true);
+        }
         tankerleriYukle();
         
-        // Atama listesini de yenile (eğer o tanker birine atanmışsa bozulmasın diye)
         tumToplayicilar = []; 
 
     } catch (e) {
         gosterMesaj(e.message, 'danger');
+    }
+}
+
+// Basit Modal Kontrolü (Eğer ui.js içinde yoksa veya override edilecekse)
+function toggleModal(modalId, show) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    
+    if (show) {
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-modal', 'true');
+        modal.setAttribute('role', 'dialog');
+    } else {
+        modal.classList.add('hidden');
+        modal.removeAttribute('aria-modal');
+        modal.removeAttribute('role');
     }
 }

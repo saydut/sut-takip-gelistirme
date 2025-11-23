@@ -148,6 +148,7 @@ def unassign_toplayici_from_tanker(sirket_id, assignment_id):
 
 def get_collectors_for_assignment(sirket_id):
     try:
+        # Sadece 'toplayici' rolündeki kullanıcıları getir
         response = g.supabase.table('kullanicilar') \
             .select('id, kullanici_adi') \
             .eq('sirket_id', sirket_id) \

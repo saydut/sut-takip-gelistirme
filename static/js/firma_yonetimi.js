@@ -18,13 +18,31 @@ async function verileriYukle() {
 
     try {
         const data = await api.fetchYonetimData();
-        if (data && data.kullanicilar) {
-             lisansBilgisiniGoster(data.kullanicilar, data.limit);
-             kullaniciTablosunuDoldur(data.kullanicilar);
+        // API yanıtı array mi yoksa obje mi kontrol et
+        // get_yonetim_data_api (firma.py) direkt listeyi dönüyor olabilir.
+        let kullanicilar = [];
+        let limit = 3; // Varsayılan limit
+
+        if (Array.isArray(data)) {
+             kullanicilar = data;
+        } else if (data && data.kullanicilar) {
+             kullanicilar = data.kullanicilar;
+             limit = data.limit || 3;
+        } else if (data && typeof data === 'object') {
+             // Eğer data objesi direkt kullanıcı listesi değilse ve .kullanicilar yoksa
+             // belki de kendisi listedir (bazı durumlarda)
+             kullanicilar = Object.values(data); 
+        }
+
+        if (kullanicilar) {
+             // Lisans bilgisini (varsa) göster
+             lisansBilgisiniGoster(kullanicilar, limit);
+             kullaniciTablosunuDoldur(kullanicilar);
         }
     } catch (error) {
+        console.error(error);
         tbody.innerHTML = '';
-        gosterMesaj('Veriler yüklenemedi.', 'danger');
+        gosterMesaj('Veriler yüklenemedi: ' + error.message, 'danger');
         if(lisans) lisans.innerText = '-';
     }
 }
@@ -32,12 +50,12 @@ async function verileriYukle() {
 function lisansBilgisiniGoster(kullanicilar, limit) {
     const el = document.getElementById('lisans-bilgisi');
     if (!el) return;
-    const toplayici = kullanicilar.filter(k => k.rol === 'toplayici').length;
-    const renk = toplayici >= limit ? 'text-red-600 font-bold' : (toplayici >= limit * 0.8 ? 'text-yellow-600' : 'text-green-600 font-bold');
+    const toplayiciSayisi = kullanicilar.filter(k => k.rol === 'toplayici').length;
+    const renk = toplayiciSayisi >= limit ? 'text-red-600 font-bold' : (toplayiciSayisi >= limit * 0.8 ? 'text-yellow-600' : 'text-green-600 font-bold');
 
     el.innerHTML = `
         <span class="text-gray-400 block text-[10px] uppercase tracking-wider">Toplayıcı Lisansı</span>
-        <span class="${renk} text-lg">${toplayici} <span class="text-gray-400 text-sm font-normal">/ ${limit}</span></span>
+        <span class="${renk} text-lg">${toplayiciSayisi} <span class="text-gray-400 text-sm font-normal">/ ${limit}</span></span>
     `;
 }
 
@@ -54,22 +72,34 @@ function kullaniciTablosunuDoldur(kullanicilar) {
 
     kullanicilar.forEach(k => {
         let tarih = '-';
-        try { tarih = new Date(k.created_at).toLocaleDateString('tr-TR'); } catch(e){}
+        try { 
+            if (k.created_at) {
+                tarih = new Date(k.created_at).toLocaleDateString('tr-TR'); 
+            }
+        } catch(e){}
 
         let rolBadge = '';
         let rolText = k.rol;
-        if (k.rol === 'firma_yetkilisi') { rolBadge = 'bg-purple-100 text-purple-800'; rolText = 'Yetkili'; }
-        else if (k.rol === 'toplayici') { rolBadge = 'bg-blue-100 text-blue-800'; rolText = 'Toplayıcı'; }
-        else if (k.rol === 'muhasebeci') { rolBadge = 'bg-yellow-100 text-yellow-800'; rolText = 'Muhasebe'; }
-        else if (k.rol === 'ciftci') { rolBadge = 'bg-green-100 text-green-800'; rolText = 'Çiftçi'; }
-        else if (k.rol === 'admin') { rolBadge = 'bg-gray-800 text-white'; rolText = 'Yönetici'; }
+        
+        // Rol renklendirme ve isimlendirme
+        switch(k.rol) {
+            case 'firma_yetkilisi': rolBadge = 'bg-purple-100 text-purple-800'; rolText = 'Yetkili'; break;
+            case 'toplayici': rolBadge = 'bg-blue-100 text-blue-800'; rolText = 'Toplayıcı'; break;
+            case 'muhasebeci': rolBadge = 'bg-yellow-100 text-yellow-800'; rolText = 'Muhasebe'; break;
+            case 'ciftci': rolBadge = 'bg-green-100 text-green-800'; rolText = 'Çiftçi'; break;
+            case 'admin': rolBadge = 'bg-gray-800 text-white'; rolText = 'Yönetici'; break;
+            default: rolBadge = 'bg-gray-100 text-gray-800';
+        }
 
         let buttons = '';
-        const safeName = (k.kullanici_adi || '').replace(/'/g, "\\'");
+        // Kullanıcı adı veya isim alanını güvenli şekilde al
+        const ad = k.kullanici_adi || k.isim || 'İsimsiz'; 
+        const safeName = ad.replace(/'/g, "\\'");
         
         if (k.rol !== 'firma_yetkilisi' && k.rol !== 'admin') {
             buttons += `<button onclick="kullaniciSifreModaliniAc(${k.id}, '${safeName}')" class="p-1.5 bg-yellow-50 text-yellow-600 rounded hover:bg-yellow-100 mr-1" title="Şifre"><i class="fa-solid fa-key"></i></button>`;
             
+            // Sadece Toplayıcı ve Muhasebeci için düzenleme butonu (Çiftçiler Tedarikçi sayfasından düzenlenir)
             if (['toplayici', 'muhasebeci'].includes(k.rol)) {
                 buttons += `<button onclick="duzenlemeModaliniAc(${k.id})" class="p-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100 mr-1" title="Düzenle"><i class="fa-solid fa-pen"></i></button>`;
             }
@@ -81,7 +111,7 @@ function kullaniciTablosunuDoldur(kullanicilar) {
 
         tbody.innerHTML += `
             <tr id="kullanici-satir-${k.id}" class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                <td class="px-6 py-4 text-sm font-medium text-gray-900">${utils.sanitizeHTML(k.kullanici_adi)}</td>
+                <td class="px-6 py-4 text-sm font-medium text-gray-900">${utils.sanitizeHTML(ad)}</td>
                 <td class="px-6 py-4"><span class="px-2 py-1 rounded text-xs font-medium ${rolBadge}">${rolText}</span></td>
                 <td class="px-6 py-4 text-sm text-gray-500">${tarih}</td>
                 <td class="px-6 py-4 text-center">${buttons}</td>
@@ -94,11 +124,24 @@ async function yeniKullaniciEkle(e) {
     e.preventDefault();
     const btn = document.getElementById('kaydet-btn');
     const original = btn.innerHTML;
+    
+    // Formdan verileri al
+    const kullaniciAdi = document.getElementById('kullanici-adi-input').value.trim();
+    const sifre = document.getElementById('sifre-input').value;
+    const telefon = document.getElementById('telefon-input').value.trim();
+    const adres = document.getElementById('adres-input').value.trim();
+    
+    // Rol seçimi (Eğer dropdown varsa oradan, yoksa varsayılan 'toplayici' veya form yapısına göre)
+    // HTML'de varsayılan olarak bir rol seçimi yoksa, genellikle 'toplayici' ekleniyor.
+    // Ancak biz buraya gizli bir input veya varsayılan değer ekleyelim.
+    const rol = 'toplayici'; // Varsayılan
+
     const veri = {
-        kullanici_adi: document.getElementById('kullanici-adi-input').value.trim(),
-        sifre: document.getElementById('sifre-input').value,
-        telefon_no: document.getElementById('telefon-input').value.trim(),
-        adres: document.getElementById('adres-input').value.trim()
+        kullanici_adi: kullaniciAdi,
+        sifre: sifre,
+        telefon: telefon,
+        adres: adres,
+        rol: rol 
     };
 
     if (!veri.kullanici_adi || !veri.sifre) { gosterMesaj('Kullanıcı adı ve şifre zorunlu.', 'warning'); return; }
@@ -106,10 +149,11 @@ async function yeniKullaniciEkle(e) {
     btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>';
 
     try {
+        // API endpoint'i: /firma/api/toplayici_ekle (veya genel kullanıcı ekle)
         const res = await api.postToplayiciEkle(veri);
         gosterMesaj(res.message, 'success');
         document.getElementById('yeni-kullanici-form').reset();
-        verileriYukle();
+        verileriYukle(); // Listeyi yenile
     } catch(err) { gosterMesaj(err.message, 'danger'); }
     finally { btn.disabled = false; btn.innerHTML = original; }
 }
@@ -146,32 +190,46 @@ async function duzenlemeModaliniAc(id) {
     const modalTitle = document.querySelector('#kullaniciDuzenleModal h3');
     const atamaAlani = document.getElementById('tedarikci-atama-alani');
     
-    modalTitle.innerText = 'Yükleniyor...';
-    document.getElementById('kullanici-duzenle-form').reset();
+    if(modalTitle) modalTitle.innerText = 'Yükleniyor...';
+    
+    const form = document.getElementById('kullanici-duzenle-form');
+    if(form) form.reset();
+    
     if(tedarikciSeciciTomSelect) tedarikciSeciciTomSelect.clear();
-    atamaAlani.classList.add('hidden');
+    if(atamaAlani) atamaAlani.classList.add('hidden');
     
     toggleModal('kullaniciDuzenleModal', true);
 
     try {
+        // API'den detayları çek
         const data = await api.fetchKullaniciDetay(id);
-        const k = data.kullanici_detay.kullanici;
         
-        modalTitle.innerText = `Düzenle: ${k.kullanici_adi}`;
+        // Gelen veri yapısı: { kullanici_detay: {...}, tum_tedarikciler: [...] }
+        const k = data.kullanici_detay; // Burası önemli, backend'den bu isimle geliyor
+        
+        if(modalTitle) modalTitle.innerText = `Düzenle: ${k.kullanici_adi}`;
         document.getElementById('edit-kullanici-id').value = k.id;
         document.getElementById('edit-kullanici-adi-input').value = k.kullanici_adi;
         document.getElementById('edit-telefon-input').value = k.telefon_no || '';
         document.getElementById('edit-adres-input').value = k.adres || '';
 
-        if (k.rol === 'toplayici' && tedarikciSeciciTomSelect) {
+        // Sadece Toplayıcılar için Tedarikçi Atama alanını göster
+        if (k.rol === 'toplayici' && atamaAlani && tedarikciSeciciTomSelect) {
             atamaAlani.classList.remove('hidden');
+            
+            // Dropdown seçeneklerini güncelle
             const options = data.tum_tedarikciler.map(t => ({ value: t.id, text: utils.sanitizeHTML(t.isim) }));
             tedarikciSeciciTomSelect.clearOptions();
             tedarikciSeciciTomSelect.addOptions(options);
-            tedarikciSeciciTomSelect.setValue(data.kullanici_detay.atanan_tedarikciler || []);
+            
+            // Mevcut atamaları seç
+            if (k.atanan_tedarikciler && k.atanan_tedarikciler.length > 0) {
+                tedarikciSeciciTomSelect.setValue(k.atanan_tedarikciler);
+            }
         }
     } catch(e) { 
-        gosterMesaj('Detay yüklenemedi.', 'danger'); 
+        console.error(e);
+        gosterMesaj('Detay yüklenemedi: ' + e.message, 'danger'); 
         toggleModal('kullaniciDuzenleModal', false);
     }
 }
@@ -181,20 +239,20 @@ async function kullaniciGuncelle() {
     const btn = document.getElementById('guncelle-btn');
     const veri = {
         kullanici_adi: document.getElementById('edit-kullanici-adi-input').value.trim(),
-        sifre: document.getElementById('edit-sifre-input').value,
+        sifre: document.getElementById('edit-sifre-input').value, // Boş olabilir
         telefon_no: document.getElementById('edit-telefon-input').value.trim(),
         adres: document.getElementById('edit-adres-input').value.trim(),
         atanan_tedarikciler: tedarikciSeciciTomSelect ? tedarikciSeciciTomSelect.getValue() : []
     };
 
-    btn.disabled = true;
+    if(btn) btn.disabled = true;
     try {
         const res = await api.updateKullanici(id, veri);
         gosterMesaj(res.message, 'success');
         toggleModal('kullaniciDuzenleModal', false);
         verileriYukle();
     } catch(e) { gosterMesaj(e.message, 'danger'); }
-    finally { btn.disabled = false; }
+    finally { if(btn) btn.disabled = false; }
 }
 
 function kullaniciSifreModaliniAc(id, ad) {
@@ -256,13 +314,15 @@ window.onload = function() {
     const form = document.getElementById('yeni-kullanici-form');
     if(form) form.addEventListener('submit', yeniKullaniciEkle);
 
-    // TomSelect
+    // TomSelect - Tedarikçi Atama için
     const selectEl = document.getElementById('edit-tedarikci-sec');
     if(selectEl) {
         tedarikciSeciciTomSelect = new TomSelect(selectEl, {
             plugins: ['remove_button'],
             create: false,
-            sortField: { field: "text", direction: "asc" }
+            sortField: { field: "text", direction: "asc" },
+            placeholder: "Tedarikçileri Seçin...",
+            maxItems: null // Sınırsız seçim
         });
     }
 

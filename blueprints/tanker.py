@@ -1,6 +1,6 @@
 # blueprints/tanker.py
 
-from flask import Blueprint, request, jsonify, g, session, render_template # render_template eklendi
+from flask import Blueprint, request, jsonify, g, session, render_template
 from services import tanker_service
 from decorators import login_required, firma_yetkilisi_required
 import logging
@@ -11,9 +11,10 @@ tanker_bp = Blueprint('tanker', __name__)
 
 @tanker_bp.route('/tanker', methods=['GET'])
 @login_required
-def tanker_yonetimi_sayfasi(): # İsim düzeltildi (page -> sayfasi)
+def tanker_yonetimi_sayfasi():
     """Tanker yönetimi sayfasını render eder."""
-    return render_template('tanker.tanker_yonetimi_sayfasi') # Düzeltildi: HTML render ediyor
+    # HATA BURADAYDI: 'tanker.tanker_yonetimi_sayfasi' yerine dosya adı yazıldı.
+    return render_template('tanker_yonetimi.html') 
 
 @tanker_bp.route('/tanker/api/listele', methods=['GET'])
 @login_required

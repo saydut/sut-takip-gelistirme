@@ -7,7 +7,10 @@ let bitisTarihiSecici = null;
 // Tarih Formatlama (API için)
 function formatDateToYYYYMMDD(date) {
     if (!date) return null;
-    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
 }
 
 // PDF İndirme
@@ -27,8 +30,9 @@ async function pdfIndir() {
     }
 }
 
-// Sayfa Başlangıcı
-window.onload = function() {
+// Sayfa Başlangıcı - GÜNCELLENDİ: DOMContentLoaded Kullanılıyor
+document.addEventListener('DOMContentLoaded', function() {
+    
     // 1. Flatpickr Başlatma
     const birAyOnce = new Date();
     birAyOnce.setMonth(birAyOnce.getMonth() - 1);
@@ -58,18 +62,34 @@ window.onload = function() {
         ayYilSecicileriniDoldur('rapor-ay', 'rapor-yil');
     }
 
-    // 3. Küçük Grafikler
-    if (typeof charts !== 'undefined') {
-        charts.haftalikGrafigiOlustur();
-        charts.tedarikciGrafigiOlustur();
+    // 3. Küçük Grafikler (Haftalık ve Pasta Grafik) - GÜVENLİ KONTROL
+    // charts objesinin ve Chart.js'in yüklendiğinden emin olalım
+    if (typeof charts !== 'undefined' && typeof Chart !== 'undefined') {
+        // DOM elementlerinin varlığını kontrol et
+        const haftalikCanvas = document.getElementById('haftalikRaporGrafigi');
+        const tedarikciCanvas = document.getElementById('tedarikciDagilimGrafigi');
+
+        if (haftalikCanvas) {
+            charts.haftalikGrafigiOlustur();
+        } else {
+            console.warn("Haftalık grafik canvas'ı bulunamadı.");
+        }
+        
+        if (tedarikciCanvas) {
+            charts.tedarikciGrafigiOlustur();
+        } else {
+            console.warn("Tedarikçi dağılım grafik canvas'ı bulunamadı.");
+        }
+    } else {
+        console.error("charts.js veya Chart.js kütüphanesi yüklenemedi! Grafikler oluşturulamıyor.");
     }
 
     // 4. Radyo Buton Dinleyici
     const filters = document.querySelectorAll('input[name="tedarikci-periyot"]');
     filters.forEach(radio => {
         radio.addEventListener('change', (e) => {
+            // Stil güncelleme
             filters.forEach(r => {
-                // Tailwind sınıflarını değiştir (Toggle Efekti)
                 const label = r.parentElement;
                 if(r.checked) {
                     label.classList.remove('text-gray-500', 'hover:bg-white');
@@ -79,13 +99,18 @@ window.onload = function() {
                     label.classList.remove('bg-white', 'text-brand-600', 'shadow-sm');
                 }
             });
-            if (typeof charts !== 'undefined') charts.tedarikciGrafigiGuncelle(e.target.value);
+            
+            // Grafiği güncelle
+            if (typeof charts !== 'undefined') {
+                charts.tedarikciGrafigiOlustur(e.target.value);
+            }
         });
     });
 
-    // 5. İlk Raporu Oluştur
-    setTimeout(() => { raporOlustur(); }, 100);
-};
+    // 5. İlk Raporu Oluştur (Detaylı Rapor ve Karlılık)
+    // API ve diğer scriptlerin tam yüklenmesi için hafif bir gecikme yine de faydalı olabilir
+    setTimeout(() => { raporOlustur(); }, 300);
+});
 
 // --- YARDIMCI FONKSİYONLAR ---
 
@@ -93,10 +118,17 @@ function ozetVerileriniDoldur(summaryData) {
     const container = document.getElementById('ozet-kartlari');
     if (container) container.classList.remove('hidden');
     
-    document.getElementById('ozet-toplam-litre').textContent = `${parseFloat(summaryData.totalLitre || 0).toFixed(2)} L`;
-    document.getElementById('ozet-gunluk-ortalama').textContent = `${parseFloat(summaryData.averageDailyLitre || 0).toFixed(2)} L`;
-    document.getElementById('ozet-girdi-sayisi').textContent = summaryData.entryCount || 0;
-    document.getElementById('ozet-gun-sayisi').textContent = summaryData.dayCount || 0;
+    if(document.getElementById('ozet-toplam-litre'))
+        document.getElementById('ozet-toplam-litre').textContent = `${parseFloat(summaryData.totalLitre || 0).toFixed(2)} L`;
+    
+    if(document.getElementById('ozet-gunluk-ortalama'))
+        document.getElementById('ozet-gunluk-ortalama').textContent = `${parseFloat(summaryData.averageDailyLitre || 0).toFixed(2)} L`;
+    
+    if(document.getElementById('ozet-girdi-sayisi'))
+        document.getElementById('ozet-girdi-sayisi').textContent = summaryData.entryCount || 0;
+    
+    if(document.getElementById('ozet-gun-sayisi'))
+        document.getElementById('ozet-gun-sayisi').textContent = summaryData.dayCount || 0;
 }
 
 function tedarikciTablosunuDoldur(breakdownData) {
@@ -122,27 +154,31 @@ function tedarikciTablosunuDoldur(breakdownData) {
 function karlilikKartlariniDoldur(data) {
     const fmt = (val) => `${parseFloat(val || 0).toFixed(2)} TL`;
     
-    document.getElementById('karlilik-toplam-gelir').textContent = fmt(data.toplam_gelir);
-    document.getElementById('karlilik-toplam-gider').textContent = fmt(data.toplam_gider);
+    if(document.getElementById('karlilik-toplam-gelir'))
+        document.getElementById('karlilik-toplam-gelir').textContent = fmt(data.toplam_gelir);
+        
+    if(document.getElementById('karlilik-toplam-gider'))
+        document.getElementById('karlilik-toplam-gider').textContent = fmt(data.toplam_gider);
     
     const net = document.getElementById('karlilik-net-kar');
-    const netVal = parseFloat(data.net_kar || 0);
-    net.textContent = fmt(netVal);
-    
-    // Renk sınıflarını temizle ve yenisini ekle
-    net.className = 'text-2xl font-bold tracking-tight ' + (netVal > 0 ? 'text-green-700' : (netVal < 0 ? 'text-red-700' : 'text-blue-700'));
+    if(net) {
+        const netVal = parseFloat(data.net_kar || 0);
+        net.textContent = fmt(netVal);
+        net.className = 'text-2xl font-bold tracking-tight ' + (netVal > 0 ? 'text-green-700' : (netVal < 0 ? 'text-red-700' : 'text-blue-700'));
+    }
 
-    document.getElementById('karlilik-sut-geliri').textContent = fmt(data.sut_geliri); 
-    document.getElementById('karlilik-tahsilat-geliri').textContent = fmt(data.diger_gelirler);
-    document.getElementById('karlilik-yem-gideri').textContent = fmt(data.yem_maliyeti);
-    document.getElementById('karlilik-finans-gideri').textContent = fmt(data.sut_maliyeti);
-    document.getElementById('karlilik-genel-masraf').textContent = fmt(data.diger_giderler);
+    if(document.getElementById('karlilik-sut-geliri')) document.getElementById('karlilik-sut-geliri').textContent = fmt(data.sut_geliri); 
+    if(document.getElementById('karlilik-tahsilat-geliri')) document.getElementById('karlilik-tahsilat-geliri').textContent = fmt(data.diger_gelirler);
+    if(document.getElementById('karlilik-yem-gideri')) document.getElementById('karlilik-yem-gideri').textContent = fmt(data.yem_maliyeti);
+    if(document.getElementById('karlilik-finans-gideri')) document.getElementById('karlilik-finans-gideri').textContent = fmt(data.sut_maliyeti);
+    if(document.getElementById('karlilik-genel-masraf')) document.getElementById('karlilik-genel-masraf').textContent = fmt(data.diger_giderler);
 }
 
 // --- RAPORLAMA MANTIĞI ---
 
 async function karlilikRaporuOlustur(baslangic, bitis) {
     const role = document.body.dataset.userRole;
+    // Sadece yetkililer görebilir
     if (role !== 'admin' && role !== 'firma_yetkilisi') return;
 
     const container = document.getElementById('karlilik-raporu-container');
@@ -153,14 +189,16 @@ async function karlilikRaporuOlustur(baslangic, bitis) {
     if(!container) return;
     
     container.classList.remove('hidden');
-    cards.classList.add('hidden');
-    msg.classList.remove('hidden');
-    msg.innerHTML = '<div class="flex justify-center items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i><span>Hesaplanıyor...</span></div>';
+    if(cards) cards.classList.add('hidden');
+    if(msg) {
+        msg.classList.remove('hidden');
+        msg.innerHTML = '<div class="flex justify-center items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i><span>Hesaplanıyor...</span></div>';
+    }
 
     if (baslangicTarihiSecici && baslangicTarihiSecici.selectedDates[0]) {
         const basStr = baslangicTarihiSecici.selectedDates[0].toLocaleDateString('tr-TR');
         const bitStr = bitisTarihiSecici.selectedDates[0].toLocaleDateString('tr-TR');
-        dateSpan.textContent = `(${basStr} - ${bitStr})`;
+        if(dateSpan) dateSpan.textContent = `(${basStr} - ${bitStr})`;
     }
     
     try {
@@ -169,10 +207,10 @@ async function karlilikRaporuOlustur(baslangic, bitis) {
         
         karlilikKartlariniDoldur(data);
         
-        msg.classList.add('hidden');
-        cards.classList.remove('hidden');
+        if(msg) msg.classList.add('hidden');
+        if(cards) cards.classList.remove('hidden');
     } catch (e) {
-        msg.innerHTML = `<span class="text-red-500">Hata: ${e.message}</span>`;
+        if(msg) msg.innerHTML = `<span class="text-red-500">Hata: ${e.message}</span>`;
     }
 }
 
@@ -184,12 +222,18 @@ async function sutRaporuOlustur(baslangic, bitis) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    document.getElementById('ozet-kartlari').classList.add('hidden');
-    document.getElementById('tedarikci-dokum-tablosu').innerHTML = '';
+    const ozetKartlari = document.getElementById('ozet-kartlari');
+    if(ozetKartlari) ozetKartlari.classList.add('hidden');
     
-    msg.classList.remove('hidden');
-    msg.innerHTML = '<div class="flex justify-center items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i><span>Yükleniyor...</span></div>';
+    const tedarikciTablosu = document.getElementById('tedarikci-dokum-tablosu');
+    if(tedarikciTablosu) tedarikciTablosu.innerHTML = '';
     
+    if(msg) {
+        msg.classList.remove('hidden');
+        msg.innerHTML = '<div class="flex justify-center items-center gap-2"><i class="fa-solid fa-circle-notch fa-spin text-brand-500"></i><span>Yükleniyor...</span></div>';
+    }
+    
+    // Eski grafiği temizle (Chart.js memory leak önlemi)
     if (detayliChart) {
         if(typeof unregisterChart === 'function') unregisterChart(detayliChart);
         detayliChart.destroy();
@@ -199,20 +243,20 @@ async function sutRaporuOlustur(baslangic, bitis) {
     try {
         const veri = await api.fetchDetayliRapor(baslangic, bitis);
 
-        if (!veri || !veri.chartData || veri.chartData.labels.length === 0) {
-            msg.textContent = "Seçilen aralıkta veri bulunamadı.";
+        if (!veri || !veri.chartData || !veri.chartData.labels || veri.chartData.labels.length === 0) {
+            if(msg) msg.textContent = "Seçilen aralıkta veri bulunamadı.";
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            title.textContent = "Rapor";
+            if(title) title.textContent = "Rapor";
             tedarikciTablosunuDoldur([]);
             return;
         }
 
-        msg.classList.add('hidden');
+        if(msg) msg.classList.add('hidden');
         
         if (baslangicTarihiSecici && baslangicTarihiSecici.selectedDates[0]) {
             const basStr = baslangicTarihiSecici.selectedDates[0].toLocaleDateString('tr-TR');
             const bitStr = bitisTarihiSecici.selectedDates[0].toLocaleDateString('tr-TR');
-            title.textContent = `${basStr} - ${bitStr} Süt Raporu`;
+            if(title) title.textContent = `${basStr} - ${bitStr} Süt Raporu`;
         }
 
         ozetVerileriniDoldur(veri.summaryData);
@@ -227,7 +271,7 @@ async function sutRaporuOlustur(baslangic, bitis) {
                     data: veri.chartData.data,
                     fill: true,
                     tension: 0.3,
-                    borderColor: '#0284c7', // Tailwind brand-600
+                    borderColor: '#0284c7', // brand-600
                     backgroundColor: 'rgba(2, 132, 199, 0.1)',
                     pointBackgroundColor: '#ffffff',
                     pointBorderColor: '#0284c7',
@@ -238,11 +282,11 @@ async function sutRaporuOlustur(baslangic, bitis) {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false, // Mobil uyum için kritik
+                maintainAspectRatio: false,
                 plugins: { 
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: 'rgba(17, 24, 39, 0.9)', // gray-900
+                        backgroundColor: 'rgba(17, 24, 39, 0.9)', 
                         padding: 12,
                         cornerRadius: 8,
                         callbacks: {
@@ -253,7 +297,7 @@ async function sutRaporuOlustur(baslangic, bitis) {
                 scales: { 
                     y: { 
                         beginAtZero: true, 
-                        grid: { color: '#f3f4f6', borderDash: [4, 4] }, // gray-100
+                        grid: { color: '#f3f4f6', borderDash: [4, 4] }, 
                         ticks: { font: { size: 11, family: "'Inter', sans-serif" } }
                     }, 
                     x: { 
@@ -267,8 +311,8 @@ async function sutRaporuOlustur(baslangic, bitis) {
         if(typeof registerChart === 'function') registerChart(detayliChart);
 
     } catch (error) {
-        console.error(error);
-        msg.textContent = "Hata oluştu.";
+        console.error("Rapor oluşturma hatası:", error);
+        if(msg) msg.textContent = "Rapor oluşturulurken bir hata oluştu.";
     }
 }
 
