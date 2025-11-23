@@ -1,4 +1,4 @@
-// static/js/api.js
+// static/js/api.js - EKSİK FONKSİYONLAR EKLENDİ
 
 const api = {
     async request(url, options = {}) {
@@ -72,13 +72,6 @@ const api = {
     fetchTedarikciler() { return this.request('/api/tedarikciler_dropdown'); },
     fetchTedarikcilerListe(p, q, s, d, l) { return this.request(`/api/tedarikciler_liste?sayfa=${p}&arama=${encodeURIComponent(q)}&limit=${l}&_t=${Date.now()}`); },
     fetchTedarikciDetay(id) { return this.request(`/api/tedarikci/${id}`); },
-    
-    // === EKLENEN FONKSİYON BURADA ===
-    fetchTedarikciDetayPageData(id, sayfa, limit) { 
-        return this.request(`/api/tedarikci/${id}/detay_sayfasi_data?sayfa=${sayfa}&limit=${limit}&_t=${Date.now()}`); 
-    },
-    // ================================
-
     fetchTedarikciOzet(id) { return this.request(`/api/tedarikci/${id}/ozet?_t=${Date.now()}`); },
     fetchTedarikciSutGirdileri(id, p, l) { return this.request(`/api/tedarikci/${id}/sut_girdileri?sayfa=${p}&limit=${l}&_t=${Date.now()}`); },
     fetchTedarikciYemIslemleri(id, p, l) { return this.request(`/api/tedarikci/${id}/yem_islemleri?sayfa=${p}&limit=${l}&_t=${Date.now()}`); },
@@ -96,6 +89,7 @@ const api = {
     postKullaniciSifreSetle(id, v) { return this.request(`/firma/api/kullanici_sifre_setle/${id}`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(v) }); },
 
     // --- Rapor & Diğer ---
+    // EKSİK OLAN FONKSİYONLAR EKLENDİ:
     fetchHaftalikOzet() { 
         return this.request(`/api/rapor/haftalik_ozet?_t=${Date.now()}`); 
     },

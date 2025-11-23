@@ -1,14 +1,34 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="tr" class="h-full bg-gray-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Detaylı Raporlar - Süt Takip Sistemi</title>
 
-{% block title %}Detaylı Raporlar - Süt Takip Sistemi{% endblock %}
-
-{% block head_extra %}
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{% endblock %}
 
-{% block content %}
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: { brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' } }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="h-full flex flex-col bg-gray-50 font-sans text-gray-900 antialiased pb-20 md:pb-0" data-user-role="{{ session.get('user', {}).get('rol', '') }}">
+
     <header class="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -216,17 +236,22 @@
 
         </div>
     </main>
-{% endblock %}
 
 {% block scripts %}
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/tr.js"></script>
-    <!-- NOT: ui.js, utils.js ve api.js zaten base.html'de yüklü olduğu için buradan sildim -->
-    
-    <!-- chart.js kütüphanesi SADECE bu sayfada gerekli, o yüzden burada yükleniyor -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/render-utils.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
+
+    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
     <script src="{{ url_for('static', filename='js/chart-manager.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+
     <script src="{{ url_for('static', filename='js/reports.js') }}"></script>
 {% endblock %}
+
+</body>
+</html>
