@@ -246,7 +246,11 @@ async function yemCikisiYap() {
         try {
             gosterMesaj('Çevrimdışı kaydedildi.', 'info');
             const ok = await kaydetYemIslemiCevrimdisi(veri);
-            if(ok) { formuTemizleCikis(); await yemIslemleriniYukle(1); }
+            // EKLENEN: Çevrimdışı modda da listeyi yenile
+            if(ok) { 
+                formuTemizleCikis(); 
+                await yemIslemleriniYukle(1); 
+            }
         } finally { btn.disabled = false; btn.innerHTML = originalText; }
         return;
     }
@@ -255,7 +259,12 @@ async function yemCikisiYap() {
         const res = await api.postYemIslemi(veri);
         gosterMesaj(res.message, 'success');
         formuTemizleCikis();
-        await Promise.all([yemUrunleriniYukle(mevcutYemSayfasi), yemSecicileriDoldur(), yemIslemleriniYukle(1)]);
+        // GÜNCELLENEN SATIR: Hem ürünleri (stok) hem de işlemleri (liste) yenile
+        await Promise.all([
+            yemUrunleriniYukle(mevcutYemSayfasi), 
+            yemSecicileriDoldur(), 
+            yemIslemleriniYukle(1) // <-- BU EKSİKTİ, EKLENDİ
+        ]);
     } catch (e) { gosterMesaj(e.message, 'danger'); }
     finally { btn.disabled = false; btn.innerHTML = originalText; }
 }

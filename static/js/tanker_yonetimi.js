@@ -192,11 +192,14 @@ async function tankerEkle() {
         gosterMesaj(result.message, 'success');
         toggleModal('yeniTankerModal', false);
         
-        if (typeof store !== 'undefined' && store.getTankers) {
-             await store.getTankers(true); 
+        // Store'u zorla güncelle (Cache temizle)
+        if (typeof store !== 'undefined' && store.setCache) {
+             store.setCache('tankers', null); // Cache'i manuel temizle
         }
+        
+        // Listeyi yeniden çek
         await tankerleriYukle(); 
-        tumToplayicilar = []; 
+        tumToplayicilar = []; // Atama listesini de sıfırla ki tekrar çeksin
 
     } catch (error) {
         gosterMesaj(error.message, 'danger');

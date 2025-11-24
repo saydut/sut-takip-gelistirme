@@ -27,7 +27,6 @@ self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME).then(cache => {
             console.log('SW: Statik dosyalar önbelleğe alınıyor (Sürüm: {{ APP_VERSION }})...');
-            // Hata veren dosyaları (CDN vb.) pas geçerek diğerlerini yükle
             return Promise.all(
                 STATIC_ASSETS.map(url => {
                     return cache.add(url).catch(err => {
@@ -45,7 +44,6 @@ self.addEventListener('activate', event => {
         caches.keys().then(keys => {
             return Promise.all(
                 keys.map(key => {
-                    // Versiyon değiştiyse eski cache'leri sil
                     if (key !== CACHE_NAME && key !== DYNAMIC_CACHE) {
                         console.log('SW: Eski önbellek temizleniyor:', key);
                         return caches.delete(key);
@@ -61,9 +59,12 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
-    // 1. API ve POST isteklerini ASLA önbellekleme (Network Only)
-    if (url.pathname.startsWith('/api/') || event.request.method !== 'GET') {
-        return;
+    // --- KRİTİK DÜZELTME BURADA YAPILDI ---
+    // Eskiden: url.pathname.startsWith('/api/') idi.
+    // Şimdi: url.pathname.includes('/api/') yaptık.
+    // Böylece /tanker/api/ veya /yem/api/ gibi yollar da önbelleğe ALINMAYACAK.
+    if (url.pathname.includes('/api/') || event.request.method !== 'GET') {
+        return; // Network Only (Direkt sunucuya git, cache'e bakma)
     }
 
     // 2. HTML Sayfaları (Network First, sonra Cache)
@@ -71,27 +72,18 @@ self.addEventListener('fetch', event => {
         event.respondWith(
             fetch(event.request)
                 .then(fetchRes => {
-                    // 401 (Giriş Sayfası) ve Hatalı yanıtları cache'leme
                     if (!fetchRes.ok || fetchRes.status === 401) {
                         return fetchRes;
                     }
-                    
-                    // KRİTİK DÜZELTME: Yanıtı hemen klonla
                     const responseToCache = fetchRes.clone();
-
-                    // Başarılı HTML'i dinamik cache'e at (Asenkron)
                     caches.open(DYNAMIC_CACHE).then(cache => {
                         cache.put(event.request.url, responseToCache);
                     });
-
-                    // Orijinal yanıtı hemen döndür (Bekleme yapmaz)
                     return fetchRes;
                 })
                 .catch(() => {
-                    // İnternet yoksa cache'den dön
                     return caches.match(event.request).then(response => {
                         if (response) return response;
-                        // Cache'de de yoksa offline sayfasını göster
                         return caches.match('/offline');
                     });
                 })
@@ -103,19 +95,14 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(event.request).then(response => {
             return response || fetch(event.request).then(fetchRes => {
-                // Sadece kendi domainimizden gelen başarılı dosyaları cache'le
                 if (fetchRes.ok && url.origin === self.location.origin) {
-                    
-                    // KRİTİK DÜZELTME: Yanıtı hemen klonla
                     const responseToCache = fetchRes.clone();
-                    
                     caches.open(DYNAMIC_CACHE).then(cache => {
                         cache.put(event.request.url, responseToCache);
                     });
                 }
                 return fetchRes;
             }).catch(() => {
-                // CDN veya ağ hatası durumunda sessizce null dön
                 return null;
             });
         })
@@ -127,47 +114,32 @@ self.addEventListener('push', function(event) {
     if (!(self.Notification && self.Notification.permission === 'granted')) {
         return;
     }
-
     let data = {};
     if (event.data) {
-        try {
-            data = event.data.json();
-        } catch (e) {
-            data = { title: 'Süt Takip', body: event.data.text() };
-        }
+        try { data = event.data.json(); } catch (e) { data = { title: 'Süt Takip', body: event.data.text() }; }
     }
-
     const title = data.title || 'Süt Takip Sistemi';
     const options = {
         body: data.body || 'Yeni bir bildiriminiz var.',
         icon: '/static/images/icon.png',
         badge: '/static/images/notification-icon-white.png',
         vibrate: [100, 50, 100],
-        data: {
-            url: data.url || '/' 
-        },
+        data: { url: data.url || '/' },
         actions: data.actions || []
     };
-
-    event.waitUntil(
-        self.registration.showNotification(title, options)
-    );
+    event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// --- BİLDİRİME TIKLAMA ---
 self.addEventListener('notificationclick', function(event) {
-    event.notification.close(); // Bildirimi kapat
-
+    event.notification.close();
     event.waitUntil(
         clients.matchAll({type: 'window', includeUncontrolled: true}).then(windowClients => {
-            // Eğer uygulama zaten açıksa ona odaklan
             for (var i = 0; i < windowClients.length; i++) {
                 var client = windowClients[i];
                 if (client.url === event.notification.data.url && 'focus' in client) {
                     return client.focus();
                 }
             }
-            // Açık değilse yeni pencere aç
             if (clients.openWindow) {
                 return clients.openWindow(event.notification.data.url);
             }
