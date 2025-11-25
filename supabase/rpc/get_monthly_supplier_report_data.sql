@@ -1,7 +1,6 @@
--- dosyası: supabase/rpc/get_monthly_supplier_report_data.sql
--- GÜNCELLENDİ: Süt ve Yem alımlarını fiyata göre gruplar.
+DROP FUNCTION IF EXISTS public.get_monthly_supplier_report_data(integer, integer, text, text);
 
-CREATE OR REPLACE FUNCTION get_monthly_supplier_report_data(
+CREATE OR REPLACE FUNCTION public.get_monthly_supplier_report_data(
     p_sirket_id integer,
     p_tedarikci_id integer,
     p_start_date text,
@@ -9,84 +8,96 @@ CREATE OR REPLACE FUNCTION get_monthly_supplier_report_data(
 )
 RETURNS json
 LANGUAGE plpgsql
-SET search_path = public -- Güvenlik için arama yolunu kısıtla
+SECURITY INVOKER -- RLS kurallarına uyması için
+SET search_path = public
 AS $$
 DECLARE
     start_utc timestamptz;
     end_utc timestamptz;
-    sut_girdileri_json json;
-    yem_islemleri_json json;
-    finansal_islemler_json json;
-    ozet_json json;
+    
+    -- Sonuçları tutacak değişkenler
+    json_sut json;
+    json_yem json;
+    json_finans json;
+    
+    toplam_sut_tutari numeric := 0;
+    toplam_yem_borcu numeric := 0;
+    toplam_odeme numeric := 0;
+    toplam_tahsilat numeric := 0;
 BEGIN
-    -- Tarih aralığını UTC'ye çevir (Türkiye saatine göre başlangıç ve bitiş)
+    -- Tarihleri ayarla
     start_utc := (p_start_date::date)::timestamp AT TIME ZONE 'Europe/Istanbul';
-    -- Bitiş tarihini bir sonraki günün başlangıcı olarak alıp < operatörüyle kullanacağız
     end_utc := ((p_end_date::date) + interval '1 day')::timestamp AT TIME ZONE 'Europe/Istanbul';
 
-    -- 1. Süt Girdilerini Topla (FİYATA GÖRE GRUPLANMIŞ)
-    SELECT COALESCE(json_agg(t ORDER BY t.fiyat), '[]'::json) INTO sut_girdileri_json
-    FROM (
-        SELECT
-            -- Tarih kaldırıldı, sadece fiyata göre grupluyoruz
-            sg.fiyat,
-            SUM(sg.litre) AS litre,
-            SUM(sg.litre * sg.fiyat) AS toplam_tutar
-        FROM sut_girdileri sg
-        WHERE sg.sirket_id = p_sirket_id
-          AND sg.tedarikci_id = p_tedarikci_id
-          AND sg.taplanma_tarihi >= start_utc AND sg.taplanma_tarihi < end_utc
-        GROUP BY sg.fiyat -- Sadece fiyata göre grupla
-    ) t;
+    -- 1. SÜT VERİLERİNİ VE TOPLAMINI AYRI HESAPLA
+    WITH sut_data AS (
+        SELECT 
+            fiyat,
+            SUM(litre) as toplam_litre,
+            SUM(litre * fiyat) as toplam_tutar
+        FROM sut_girdileri
+        WHERE sirket_id = p_sirket_id 
+          AND tedarikci_id = p_tedarikci_id
+          AND taplanma_tarihi >= start_utc AND taplanma_tarihi < end_utc
+        GROUP BY fiyat
+    )
+    SELECT 
+        COALESCE(json_agg(sut_data ORDER BY fiyat), '[]'::json),
+        COALESCE(SUM(toplam_tutar), 0)
+    INTO json_sut, toplam_sut_tutari
+    FROM sut_data;
 
-    -- 2. Yem İşlemlerini Topla (ÜRÜN ADI ve FİYATA GÖRE GRUPLANMIŞ)
-    SELECT COALESCE(json_agg(y ORDER BY y.yem_adi, y.islem_anindaki_birim_fiyat), '[]'::json) INTO yem_islemleri_json
-    FROM (
-        SELECT
-            -- Tarih kaldırıldı
+    -- 2. YEM VERİLERİNİ VE TOPLAMINI AYRI HESAPLA
+    WITH yem_data AS (
+        SELECT 
             yu.yem_adi,
             yi.islem_anindaki_birim_fiyat,
-            SUM(yi.miktar_kg) AS miktar_kg,
-            SUM(yi.toplam_tutar) AS toplam_tutar
+            SUM(yi.miktar_kg) as miktar_kg,
+            SUM(yi.toplam_tutar) as toplam_tutar
         FROM yem_islemleri yi
         JOIN yem_urunleri yu ON yi.yem_urun_id = yu.id
-        WHERE yi.sirket_id = p_sirket_id
+        WHERE yi.sirket_id = p_sirket_id 
           AND yi.tedarikci_id = p_tedarikci_id
           AND yi.islem_tarihi >= start_utc AND yi.islem_tarihi < end_utc
-        GROUP BY yu.yem_adi, yi.islem_anindaki_birim_fiyat -- Ürün adı ve fiyata göre grupla
-    ) y;
+        GROUP BY yu.yem_adi, yi.islem_anindaki_birim_fiyat
+    )
+    SELECT 
+        COALESCE(json_agg(yem_data ORDER BY yem_adi), '[]'::json),
+        COALESCE(SUM(toplam_tutar), 0)
+    INTO json_yem, toplam_yem_borcu
+    FROM yem_data;
 
-    -- 3. Finansal İşlemleri Topla (BUNLAR GRUPLANMAZ, LİSTE HALİNDE KALIR)
-    SELECT COALESCE(json_agg(f ORDER BY f.islem_tarihi), '[]'::json) INTO finansal_islemler_json
-    FROM (
-        SELECT
-            to_char((fi.islem_tarihi AT TIME ZONE 'Europe/Istanbul'), 'DD.MM.YYYY HH24:MI') AS islem_tarihi_formatted, -- Formatlanmış tarih
-            fi.islem_tarihi, -- Sıralama için orijinal tarih
-            fi.islem_tipi, fi.tutar, fi.aciklama
-        FROM finansal_islemler fi
-        WHERE fi.sirket_id = p_sirket_id
-          AND fi.tedarikci_id = p_tedarikci_id
-          AND fi.islem_tarihi >= start_utc AND fi.islem_tarihi < end_utc
-    ) f;
+    -- 3. FİNANS VERİLERİNİ VE TOPLAMLARI AYRI HESAPLA
+    WITH finans_data AS (
+        SELECT 
+            islem_tarihi,
+            islem_tipi,
+            tutar,
+            aciklama,
+            to_char((islem_tarihi AT TIME ZONE 'Europe/Istanbul'), 'DD.MM.YYYY HH24:MI') as islem_tarihi_formatted
+        FROM finansal_islemler
+        WHERE sirket_id = p_sirket_id 
+          AND tedarikci_id = p_tedarikci_id
+          AND islem_tarihi >= start_utc AND islem_tarihi < end_utc
+    )
+    SELECT 
+        COALESCE(json_agg(finans_data ORDER BY islem_tarihi), '[]'::json),
+        COALESCE(SUM(CASE WHEN islem_tipi IN ('Ödeme', 'Avans') THEN tutar ELSE 0 END), 0),
+        COALESCE(SUM(CASE WHEN islem_tipi = 'Tahsilat' THEN tutar ELSE 0 END), 0)
+    INTO json_finans, toplam_odeme, toplam_tahsilat
+    FROM finans_data;
 
-    -- 4. Özeti Hesapla (Bu sorgu değişmedi, RPC'den gelen gruplanmış JSON'ları toplar)
-    SELECT json_build_object(
-        'toplam_sut_tutari', COALESCE((SELECT SUM((j->>'toplam_tutar')::numeric) FROM json_array_elements(sut_girdileri_json) j), 0),
-        'toplam_yem_borcu', COALESCE((SELECT SUM((j->>'toplam_tutar')::numeric) FROM json_array_elements(yem_islemleri_json) j), 0),
-        'toplam_sirket_odemesi', COALESCE((SELECT SUM((j->>'tutar')::numeric)
-                                           FROM json_array_elements(finansal_islemler_json) j
-                                           WHERE j->>'islem_tipi' IN ('Ödeme', 'Avans')), 0),
-        'toplam_tahsilat', COALESCE((SELECT SUM((j->>'tutar')::numeric)
-                                     FROM json_array_elements(finansal_islemler_json) j
-                                     WHERE j->>'islem_tipi' = 'Tahsilat'), 0)
-    ) INTO ozet_json;
-
-    -- 5. Tüm verileri birleştirip döndür
+    -- 4. SONUCU BİRLEŞTİR VE DÖNDÜR
     RETURN json_build_object(
-        'sut_girdileri', sut_girdileri_json,
-        'yem_islemleri', yem_islemleri_json,
-        'finansal_islemler', finansal_islemler_json,
-        'ozet', ozet_json
+        'sut_girdileri', json_sut,
+        'yem_islemleri', json_yem,
+        'finansal_islemler', json_finans,
+        'ozet', json_build_object(
+            'toplam_sut_tutari', toplam_sut_tutari,
+            'toplam_yem_borcu', toplam_yem_borcu,
+            'toplam_sirket_odemesi', toplam_odeme,
+            'toplam_tahsilat', toplam_tahsilat
+        )
     );
 END;
 $$;
