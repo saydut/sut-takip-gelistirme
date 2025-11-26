@@ -18,18 +18,17 @@ const YEMLER_SAYFA_BASI = 10;
 const ISLEMLER_SAYFA_BASI = 5; 
 const KRITIK_STOK_SEVIYESI = 500;
 
-// === YARDIMCI: TomSelect Güvenli Başlatıcı (HATA ÇÖZÜMÜ BURADA) ===
+// === YARDIMCI: TomSelect Güvenli Başlatıcı ===
 function safeInitTomSelect(selector, options) {
     const el = document.querySelector(selector);
     if (!el) return null;
-    // Eğer daha önce başlatılmışsa, eski örneği yok et
     if (el.tomselect) {
         el.tomselect.destroy();
     }
     return new TomSelect(el, options);
 }
 
-// === 2. FONKSİYON TANIMLARI (ÖNCE BUNLAR YÜKLENMELİ) ===
+// === 2. FONKSİYON TANIMLARI ===
 
 // --- Yem Giriş (Alış) Mantığı ---
 async function handleYemGirisSecimi(value) {
@@ -246,11 +245,7 @@ async function yemCikisiYap() {
         try {
             gosterMesaj('Çevrimdışı kaydedildi.', 'info');
             const ok = await kaydetYemIslemiCevrimdisi(veri);
-            // EKLENEN: Çevrimdışı modda da listeyi yenile
-            if(ok) { 
-                formuTemizleCikis(); 
-                await yemIslemleriniYukle(1); 
-            }
+            if(ok) { formuTemizleCikis(); await yemIslemleriniYukle(1); }
         } finally { btn.disabled = false; btn.innerHTML = originalText; }
         return;
     }
@@ -259,12 +254,7 @@ async function yemCikisiYap() {
         const res = await api.postYemIslemi(veri);
         gosterMesaj(res.message, 'success');
         formuTemizleCikis();
-        // GÜNCELLENEN SATIR: Hem ürünleri (stok) hem de işlemleri (liste) yenile
-        await Promise.all([
-            yemUrunleriniYukle(mevcutYemSayfasi), 
-            yemSecicileriDoldur(), 
-            yemIslemleriniYukle(1) // <-- BU EKSİKTİ, EKLENDİ
-        ]);
+        await Promise.all([yemUrunleriniYukle(mevcutYemSayfasi), yemSecicileriDoldur(), yemIslemleriniYukle(1)]);
     } catch (e) { gosterMesaj(e.message, 'danger'); }
     finally { btn.disabled = false; btn.innerHTML = originalText; }
 }
@@ -626,6 +616,17 @@ async function yemIslemleriniYukle(sayfa=1) {
         kayitSayisi: ISLEMLER_SAYFA_BASI,
         mevcutGorunum: yemIslemMevcutGorunum
     });
+}
+
+// --- YENİ EKLENEN: Yerel toggleModal fonksiyonu (Scoping sorunu çözümü için) ---
+function toggleModal(modalId, show) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    if (show) {
+        modal.classList.remove('hidden');
+    } else {
+        modal.classList.add('hidden');
+    }
 }
 
 // === 3. DOMContentLoaded (EN SONA) ===
