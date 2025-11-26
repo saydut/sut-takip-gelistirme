@@ -6,7 +6,7 @@ const KAYIT_SAYISI = 15;
 let mevcutAramaTerimi = '';
 
 // Sayfa Yüklendiğinde
-window.onload = async () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Görünüm Ayarları
     tedarikcilerMevcutGorunum = localStorage.getItem('tedarikciGorunum') || 'tablo';
     gorunumuAyarla(tedarikcilerMevcutGorunum);
@@ -19,13 +19,23 @@ window.onload = async () => {
     });
 
     await verileriYukle();
-};
+});
 
-// --- MODAL YÖNETİMİ (BASİT) ---
+// --- MODAL YÖNETİMİ ---
+// Artık base.html içindeki global toggleModal'ı veya ui.js'i kullanabiliriz.
+// Ancak yerel bir override gerekirse:
 function toggleModal(id, show) {
     const el = document.getElementById(id);
-    if(show) el.classList.remove('hidden');
-    else el.classList.add('hidden');
+    if (!el) return;
+    
+    if (show) {
+        el.classList.remove('hidden');
+        // Input odaklama
+        const input = el.querySelector('input');
+        if(input) setTimeout(() => input.focus(), 100);
+    } else {
+        el.classList.add('hidden');
+    }
 }
 
 // --- VERİ YÜKLEME ---
@@ -52,36 +62,51 @@ async function verileriYukle(sayfa = 1) {
 function renderTable(container, suppliers) {
     container.innerHTML = '';
     suppliers.forEach(s => {
+        const toplamLitre = parseFloat(s.toplam_litre || 0).toFixed(2);
+        
         container.innerHTML += `
         <tr class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-            <td class="px-6 py-4 text-sm font-medium text-gray-900">${utils.sanitizeHTML(s.isim)}</td>
-            <td class="px-6 py-4 text-sm text-gray-500">${utils.sanitizeHTML(s.telefon_no) || '-'}</td>
-            <td class="px-6 py-4 text-sm text-right font-mono text-brand-600 font-bold">${parseFloat(s.toplam_litre||0).toFixed(2)} L</td>
-            <td class="px-6 py-4 text-center flex justify-center gap-2">
-                <a href="/tedarikci/${s.id}" class="p-1.5 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"><i class="fa-solid fa-eye"></i></a>
-                <button onclick="tedarikciDuzenleAc(${s.id})" class="p-1.5 bg-yellow-50 text-yellow-600 rounded hover:bg-yellow-100"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="silmeOnayiAc(${s.id}, '${s.isim.replace(/'/g, "\\'")}')" class="p-1.5 bg-red-50 text-red-600 rounded hover:bg-red-100"><i class="fa-solid fa-trash"></i></button>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${utils.sanitizeHTML(s.isim)}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">${utils.sanitizeHTML(s.telefon_no) || '-'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono text-brand-600 font-bold">${toplamLitre} L</td>
+            <td class="px-6 py-4 whitespace-nowrap text-center flex justify-center gap-2">
+                <a href="/tedarikci/${s.id}" class="p-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors" title="Detay"><i class="fa-solid fa-eye"></i></a>
+                <button onclick="tedarikciDuzenleAc(${s.id})" class="p-2 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100 transition-colors" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="silmeOnayiAc(${s.id}, '${s.isim.replace(/'/g, "\\'")}')" class="p-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors" title="Sil"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>`;
     });
 }
 
-// Kart Oluşturucu
+// Kart Oluşturucu (Mobil Uyumlu)
 function renderCards(container, suppliers) {
     container.innerHTML = '';
     suppliers.forEach(s => {
+        const toplamLitre = parseFloat(s.toplam_litre || 0).toFixed(2);
+        
         container.innerHTML += `
-        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-shadow">
+        <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:shadow-md transition-all duration-200 group">
             <div class="flex justify-between items-start mb-3">
-                <h3 class="font-bold text-gray-900">${utils.sanitizeHTML(s.isim)}</h3>
-                <a href="/tedarikci/${s.id}" class="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100">Detay</a>
+                <div class="flex items-center gap-3">
+                    <div class="h-10 w-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600 font-bold text-lg">
+                        ${s.isim.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900 text-base leading-tight">${utils.sanitizeHTML(s.isim)}</h3>
+                        <p class="text-xs text-gray-400 mt-0.5"><i class="fa-solid fa-phone mr-1"></i>${s.telefon_no || '-'}</p>
+                    </div>
+                </div>
             </div>
-            <p class="text-sm text-gray-500 mb-2"><i class="fa-solid fa-phone mr-2"></i>${s.telefon_no || '-'}</p>
-            <div class="flex justify-between items-center border-t border-gray-50 pt-2">
-                <span class="font-bold text-brand-600 text-lg">${parseFloat(s.toplam_litre||0).toFixed(2)} L</span>
+            
+            <div class="flex justify-between items-center border-t border-gray-50 pt-3 mt-2">
+                <div class="flex flex-col">
+                    <span class="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">Toplam Süt</span>
+                    <span class="font-bold text-brand-600 text-lg">${toplamLitre} L</span>
+                </div>
                 <div class="flex gap-1">
-                    <button onclick="tedarikciDuzenleAc(${s.id})" class="p-1 text-yellow-600 hover:bg-yellow-50 rounded"><i class="fa-solid fa-pen"></i></button>
-                    <button onclick="silmeOnayiAc(${s.id}, '${s.isim.replace(/'/g, "\\'")}')" class="p-1 text-red-600 hover:bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button>
+                    <a href="/tedarikci/${s.id}" class="p-2 text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"><i class="fa-solid fa-eye"></i></a>
+                    <button onclick="tedarikciDuzenleAc(${s.id})" class="p-2 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition-colors"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="silmeOnayiAc(${s.id}, '${s.isim.replace(/'/g, "\\'")}')" class="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </div>
         </div>`;
@@ -114,22 +139,33 @@ async function tedarikciDuzenleAc(id) {
 
 // Kaydet (Hem Yeni Hem Düzenleme)
 async function tedarikciKaydet() {
+    const btn = document.getElementById('kaydet-tedarikci-btn');
+    const originalText = btn.innerHTML;
+    
     const id = document.getElementById('edit-tedarikci-id').value;
     const veri = {
-        isim: document.getElementById('tedarikci-isim-input').value,
-        tc_no: document.getElementById('tedarikci-tc-input').value,
-        telefon_no: document.getElementById('tedarikci-tel-input').value,
-        adres: document.getElementById('tedarikci-adres-input').value
+        isim: document.getElementById('tedarikci-isim-input').value.trim(),
+        tc_no: document.getElementById('tedarikci-tc-input').value.trim(),
+        telefon_no: document.getElementById('tedarikci-tel-input').value.trim(),
+        adres: document.getElementById('tedarikci-adres-input').value.trim()
     };
 
     if(!veri.isim) { gosterMesaj('İsim zorunlu.', 'warning'); return; }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Kaydediliyor...';
 
     try {
         const res = id ? await api.updateTedarikci(id, veri) : await api.postTedarikci(veri);
         gosterMesaj(res.message, 'success');
         toggleModal('tedarikciModal', false);
         verileriYukle(id ? mevcutSayfa : 1);
-    } catch(e) { gosterMesaj(e.message, 'danger'); }
+    } catch(e) { 
+        gosterMesaj(e.message, 'danger'); 
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
 }
 
 // Silme
@@ -142,11 +178,19 @@ function silmeOnayiAc(id, isim) {
 async function tedarikciSil() {
     const id = document.getElementById('silinecek-tedarikci-id').value;
     toggleModal('silmeOnayModal', false);
+    
+    // UI'dan sil (Optimistik)
+    const row = document.querySelector(`button[onclick*="silmeOnayiAc(${id},"]`)?.closest('tr');
+    if(row) row.remove();
+
     try {
         const res = await api.deleteTedarikci(id);
         gosterMesaj(res.message, 'success');
         verileriYukle(1);
-    } catch(e) { gosterMesaj(e.message, 'danger'); }
+    } catch(e) { 
+        gosterMesaj(e.message, 'danger'); 
+        verileriYukle(1); // Hata olursa listeyi geri getir
+    }
 }
 
 // Görünüm Değiştir
@@ -167,9 +211,13 @@ function gorunumuAyarla(v) {
     
     if(v==='tablo') {
         btnT.classList.add('bg-white', 'shadow-sm', 'text-brand-600');
+        btnT.classList.remove('text-gray-500');
         btnC.classList.remove('bg-white', 'shadow-sm', 'text-brand-600');
+        btnC.classList.add('text-gray-500');
     } else {
         btnC.classList.add('bg-white', 'shadow-sm', 'text-brand-600');
+        btnC.classList.remove('text-gray-500');
         btnT.classList.remove('bg-white', 'shadow-sm', 'text-brand-600');
+        btnT.classList.add('text-gray-500');
     }
 }

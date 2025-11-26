@@ -1,31 +1,8 @@
-<!DOCTYPE html>
-<html lang="tr" class="h-full bg-gray-50">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Tedarikçi Detayı - Süt Takip Sistemi</title>
+{% extends "base.html" %}
 
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% block title %}Tedarikçi Detayı - Süt Takip Sistemi{% endblock %}
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' } }
-                }
-            }
-        }
-    </script>
-</head>
-<body class="h-full flex flex-col bg-gray-50 font-sans text-gray-900 antialiased pb-20 md:pb-0" data-user-role="{{ session.get('user', {}).get('rol', '') }}">
-
+{% block content %}
     <header class="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -163,15 +140,10 @@
 
         </div>
     </main>
+{% endblock %}
 
-    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
-    
-    <script src="{{ url_for('static', filename='js/render-utils.js') }}"></script>
-
-    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+{% block scripts %}
     <script src="{{ url_for('static', filename='js/data-loader.js') }}"></script>
-    
     <script> const TEDARIKCI_ID = {{ tedarikci_id }}; </script>
     <script src="{{ url_for('static', filename='js/tedarikci_detay.js') }}"></script>
 
@@ -200,6 +172,4 @@
             if(typeof onTabChanged === 'function') onTabChanged(tabName);
         }
     </script>
-
-</body>
-</html>
+{% endblock %}

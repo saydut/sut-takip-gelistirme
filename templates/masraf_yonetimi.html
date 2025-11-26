@@ -1,19 +1,12 @@
-<!DOCTYPE html>
-<html lang="tr" class="h-full bg-gray-50">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Masraf Yönetimi</title>
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']},colors:{brand:{50:'#f0f9ff',100:'#e0f2fe',500:'#0ea5e9',600:'#0284c7',700:'#0369a1'}}}}}</script>
-</head>
-<body class="h-full flex flex-col bg-gray-50 font-sans text-gray-900 antialiased pb-20 md:pb-0" data-user-role="{{ session.get('user', {}).get('rol', '') }}">
+{% extends "base.html" %}
 
+{% block title %}Masraf Yönetimi - Süt Takip Sistemi{% endblock %}
+
+{% block head_extra %}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
     <header class="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -91,13 +84,11 @@
     <div id="kategoriModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('kategoriModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-md p-6"><h3 class="text-lg font-bold text-gray-900 mb-4">Kategori Ekle</h3><div class="flex gap-2 mb-4"><input type="text" id="yeni-kategori-ad" class="flex-1 border border-gray-300 rounded-md p-2 text-sm focus:ring-brand-500 focus:border-brand-500" placeholder="Örn: Elektrik"><button onclick="kategoriEkle()" class="bg-green-600 text-white px-4 py-2 rounded-md text-sm hover:bg-green-700 transition-colors">Ekle</button></div><ul id="kategori-listesi" class="divide-y divide-gray-100 text-sm max-h-60 overflow-y-auto"></ul><div class="mt-4 flex justify-end"><button onclick="toggleModal('kategoriModal', false)" class="text-gray-500 hover:text-gray-700 text-sm font-medium">Kapat</button></div></div></div></div></div>
     <div id="silmeOnayModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('silmeOnayModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6"><div class="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4"><i class="fa-solid fa-trash text-red-600"></i></div><h3 class="text-center text-base font-semibold mb-2">Sil?</h3><p class="text-center text-sm text-gray-500 mb-4">Emin misiniz?</p><input type="hidden" id="silinecek-masraf-id"><div class="flex justify-end gap-2"><button onclick="toggleModal('silmeOnayModal', false)" class="px-3 py-2 border rounded-md text-sm text-gray-700 hover:bg-gray-50">İptal</button><button onclick="masrafSil()" class="px-3 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700">Sil</button></div></div></div></div></div>
 
+{% endblock %}
+
+{% block scripts %}
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/tr.js"></script>
-    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/render-utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
     <script src="{{ url_for('static', filename='js/masraf_yonetimi.js') }}"></script>
     <script>function toggleModal(id, s){const m=document.getElementById(id);if(s)m.classList.remove('hidden');else m.classList.add('hidden');}</script>
-</body>
-</html>
+{% endblock %}

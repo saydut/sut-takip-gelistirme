@@ -1,35 +1,16 @@
-<!DOCTYPE html>
-<html lang="tr" class="h-full bg-gray-50">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Kullanıcı Yönetimi</title>
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
-    
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
+{% extends "base.html" %}
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' } }
-                }
-            }
-        }
-    </script>
+{% block title %}Kullanıcı Yönetimi - Süt Takip Sistemi{% endblock %}
+
+{% block head_extra %}
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
     <style>
         .ts-control { border-radius: 0.5rem !important; padding: 0.5rem !important; border-color: #d1d5db !important; }
         .ts-dropdown { border-radius: 0.5rem !important; border-color: #d1d5db !important; }
-        .hidden { display: none !important; }
     </style>
-</head>
-<body class="h-full flex flex-col bg-gray-50 font-sans text-gray-900 antialiased pb-20 md:pb-0" data-user-role="{{ session.get('user', {}).get('rol', '') }}">
+{% endblock %}
 
+{% block content %}
     <header class="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -116,13 +97,10 @@
 
     {% include '_firma_modals.html' %}
 
+{% endblock %}
+
+{% block scripts %}
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
-    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
-    
-    <script src="{{ url_for('static', filename='js/render-utils.js') }}"></script>
-    
-    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
     <script src="{{ url_for('static', filename='js/firma_yonetimi.js') }}"></script>
     
     <script>
@@ -132,5 +110,4 @@
             else m.classList.add('hidden');
         }
     </script>
-</body>
-</html>
+{% endblock %}

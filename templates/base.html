@@ -26,10 +26,37 @@
 
     <script>
         tailwind.config = {
+            darkMode: 'class', // Class tabanlı dark mode
             theme: {
                 extend: {
                     fontFamily: { sans: ['Inter', 'sans-serif'] },
-                    colors: { brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1' } }
+                    // RENK PALETİNİ CSS DEĞİŞKENLERİNE BAĞLIYORUZ
+                    colors: {
+                        // Beyaz artık dinamik (Karanlıkta koyu, aydınlıkta beyaz)
+                        white: 'var(--surface-color)', 
+                        
+                        // Gri tonlarını da dinamik yapıyoruz
+                        gray: {
+                            50: 'var(--bg-color)',      // Sayfa arkaplanı
+                            100: 'var(--border-color)', // Hafif kenarlıklar
+                            200: 'var(--border-color)',
+                            300: '#d1d5db',
+                            400: '#9ca3af',
+                            500: 'var(--text-muted)',   // İkincil metinler
+                            600: '#4b5563',
+                            700: '#374151',
+                            800: '#1f2937',
+                            900: 'var(--text-main)',    // Ana başlıklar
+                        },
+                        // Brand renklerini de bağlıyoruz
+                        brand: { 
+                            50: 'var(--brand-50)', 
+                            100: 'var(--brand-100)', 
+                            500: 'var(--brand-500)', 
+                            600: 'var(--brand-600)', 
+                            700: 'var(--brand-700)' 
+                        }
+                    }
                 }
             }
         }
@@ -39,7 +66,7 @@
     {% block head_extra %}{% endblock %}
 </head>
 <body
-    class="h-full flex flex-col bg-gray-50 font-sans text-gray-900 antialiased pb-24 md:pb-0"
+    class="h-full flex flex-col bg-gray-50 font-sans text-gray-900 antialiased pb-24 md:pb-0 transition-colors duration-300"
     data-app-version="{{ APP_VERSION }}"
     {% if session.get('user') %}
     data-user-role="{{ session.get('user', {}).get('rol', '') }}"
@@ -99,9 +126,6 @@
     </nav>
     {% endif %}
 
-    <!-- NOT: GLOBAL HAKKINDA MODALI BURADAN KALDIRILDI VE _hizli_islemler.html İÇİNE TAŞINDI -->
-    <!-- Bu sayede base.html kullanmayan sayfalarda da (Örn: Finans) modal çalışacaktır. -->
-
     <!-- Şifre Değiştir Modal -->
     <div id="sifreDegistirModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true">
         <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity backdrop-blur-sm" onclick="toggleModal('sifreDegistirModal', false)"></div>
@@ -144,8 +168,6 @@
                 else modal.classList.add('hidden');
             }
         }
-
-        // NOT: openGlobalHakkinda() fonksiyonu artık _hizli_islemler.html içinde tanımlıdır.
     </script>
 
     <script src="{{ url_for('static', filename='theme.js') }}"></script>

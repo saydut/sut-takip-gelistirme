@@ -1,49 +1,49 @@
+// static/theme.js
+
 document.addEventListener('DOMContentLoaded', () => {
-    // Tema değiştirme düğmesine olay dinleyicisi ekler
-    const themeToggle = document.getElementById('theme-toggle');
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            // Animasyon için class ekle
-            themeToggle.classList.add('rotating');
-
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
-            
-            // Animasyon bittikten sonra class'ı kaldır ki tekrar tetiklenebilsin
-            themeToggle.addEventListener('transitionend', () => {
-                themeToggle.classList.remove('rotating');
-            }, { once: true });
-        });
-    }
-
-    // Sayfa yüklendiğinde temayı uygular
-    const storedTheme = localStorage.getItem('theme');
-    if (storedTheme) {
-        setTheme(storedTheme);
-    } else {
-        setTheme('light');
-    }
-});
-
-function setTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-
+    const themeToggleBtn = document.getElementById('theme-toggle');
     const sunIcon = document.getElementById('sun-icon');
     const moonIcon = document.getElementById('moon-icon');
+    const htmlElement = document.documentElement;
 
-    if (sunIcon && moonIcon) {
-        if (theme === 'dark') {
-            sunIcon.style.display = 'inline-block';
-            moonIcon.style.display = 'none';
-        } else {
-            sunIcon.style.display = 'none';
-            moonIcon.style.display = 'inline-block';
-        }
+    // 1. Kayıtlı temayı kontrol et, yoksa VARSAYILAN olarak 'light' (aydınlık) kullan
+    // Eskiden sistem tercihine bakıyorduk, şimdi direkt 'light' atıyoruz.
+    const currentTheme = localStorage.getItem('theme') || 'light';
+
+    // 2. Temayı uygula
+    if (currentTheme === 'dark') {
+        htmlElement.setAttribute('data-theme', 'dark');
+        if(sunIcon) sunIcon.classList.remove('hidden');
+        if(moonIcon) moonIcon.classList.add('hidden');
+    } else {
+        htmlElement.setAttribute('data-theme', 'light');
+        if(sunIcon) sunIcon.classList.add('hidden');
+        if(moonIcon) moonIcon.classList.remove('hidden');
     }
-    
-    // DEĞİŞİKLİK: Merkezi grafik yöneticisini çağırır
-    if (typeof updateAllChartThemes === 'function') {
-        updateAllChartThemes();
+
+    // 3. Butona tıklama olayı (Aynı kalıyor)
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const isDark = htmlElement.getAttribute('data-theme') === 'dark';
+            
+            if (isDark) {
+                // Light moda geç
+                htmlElement.setAttribute('data-theme', 'light');
+                localStorage.setItem('theme', 'light');
+                if(sunIcon) sunIcon.classList.add('hidden');
+                if(moonIcon) moonIcon.classList.remove('hidden');
+            } else {
+                // Dark moda geç
+                htmlElement.setAttribute('data-theme', 'dark');
+                localStorage.setItem('theme', 'dark');
+                if(sunIcon) sunIcon.classList.remove('hidden');
+                if(moonIcon) moonIcon.classList.add('hidden');
+            }
+            
+            // Grafik güncelleme tetikleyicisi (varsa)
+            if (typeof updateAllChartThemes === 'function') {
+                updateAllChartThemes();
+            }
+        });
     }
-}
+});

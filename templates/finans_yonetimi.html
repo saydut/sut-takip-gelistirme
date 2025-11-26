@@ -1,21 +1,13 @@
-<!DOCTYPE html>
-<html lang="tr" class="h-full bg-gray-50">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Finans Yönetimi</title>
-    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+{% extends "base.html" %}
+
+{% block title %}Finans Yönetimi - Süt Takip Sistemi{% endblock %}
+
+{% block head_extra %}
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-    <script>tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif']},colors:{brand:{50:'#f0f9ff',100:'#e0f2fe',500:'#0ea5e9',600:'#0284c7',700:'#0369a1'}}}}}</script>
-    <style>.ts-control{border-radius:0.5rem!important;padding:0.5rem!important;border-color:#d1d5db!important}.ts-dropdown{border-radius:0.5rem!important;border-color:#d1d5db!important}.hidden{display:none!important}</style>
-</head>
-<body class="h-full flex flex-col bg-gray-50 font-sans text-gray-900 antialiased pb-20 md:pb-0">
+{% endblock %}
 
+{% block content %}
     <header class="bg-white shadow-sm sticky top-0 z-30 border-b border-gray-200">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -77,18 +69,15 @@
     <div id="duzenleModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('duzenleModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6"><h3 class="text-base font-semibold mb-4">Düzenle</h3><input type="hidden" id="edit-islem-id"><div class="space-y-3"><div><label class="block text-sm">Yeni Tutar</label><input type="number" step="0.01" id="edit-tutar-input" class="block w-full border rounded-md p-2 text-sm"></div><div><label class="block text-sm">Açıklama</label><textarea id="edit-aciklama-input" rows="2" class="block w-full border rounded-md p-2 text-sm"></textarea></div></div><div class="mt-5 flex justify-end gap-2"><button onclick="toggleModal('duzenleModal', false)" class="px-3 py-2 text-sm border rounded-md">İptal</button><button onclick="finansalIslemGuncelle()" class="px-3 py-2 text-sm text-white bg-brand-600 rounded-md">Kaydet</button></div></div></div></div></div>
     <div id="silmeOnayModal" class="fixed inset-0 z-50 hidden" aria-modal="true"><div class="fixed inset-0 bg-gray-500 bg-opacity-75" onclick="toggleModal('silmeOnayModal', false)"></div><div class="fixed inset-0 z-10 overflow-y-auto"><div class="flex min-h-full items-center justify-center p-4"><div class="relative rounded-lg bg-white shadow-xl sm:w-full sm:max-w-sm p-6"><h3 class="text-base font-semibold mb-2">Sil?</h3><p class="text-sm text-gray-500 mb-4">Emin misiniz?</p><input type="hidden" id="silinecek-islem-id"><div class="flex justify-end gap-2"><button onclick="toggleModal('silmeOnayModal', false)" class="px-3 py-2 text-sm border rounded-md">Vazgeç</button><button onclick="finansalIslemSil()" class="px-3 py-2 text-sm text-white bg-red-600 rounded-md">Sil</button></div></div></div></div></div>
 
+{% endblock %}
+
+{% block scripts %}
     <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/tr.js"></script>
     <script src="https://unpkg.com/dexie@3/dist/dexie.js"></script>
-    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/api.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/render-utils.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/offline.js') }}"></script>
     <script src="{{ url_for('static', filename='js/store.js') }}"></script>
     <script src="{{ url_for('static', filename='js/data-loader.js') }}"></script>
     <script src="{{ url_for('static', filename='js/finans_yonetimi.js') }}"></script>
     <script>function toggleModal(id, show){const m=document.getElementById(id);if(show)m.classList.remove('hidden');else m.classList.add('hidden');}</script>
-</body>
-</html>
+{% endblock %}
