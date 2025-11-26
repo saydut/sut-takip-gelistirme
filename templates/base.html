@@ -99,104 +99,8 @@
     </nav>
     {% endif %}
 
-    <!-- GLOBAL HAKKINDA MODAL (GÜNCELLENMİŞ Z-INDEX: 9999) -->
-    <div id="global-hakkinda-modal" class="fixed inset-0 z-[9999] hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <!-- Arkaplan Karartma -->
-        <div class="fixed inset-0 bg-gray-900/75 backdrop-blur-sm transition-opacity" onclick="closeGlobalHakkinda()"></div>
-
-        <div class="fixed inset-0 z-[10000] w-screen overflow-y-auto">
-            <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                <!-- Modal İçeriği -->
-                <div class="relative transform overflow-hidden rounded-2xl bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-                    
-                    <!-- Başlık Kısmı (Markalı) -->
-                    <div class="bg-brand-600 px-4 py-8 sm:px-6 text-center relative overflow-hidden">
-                        <!-- Dekoratif Arkaplan İkonu -->
-                        <div class="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
-                            <i class="fa-solid fa-cow text-9xl text-white transform -rotate-12 translate-x-1/2"></i>
-                        </div>
-                        
-                        <div class="relative z-10">
-                            <div class="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm mb-4 shadow-inner ring-4 ring-white/10">
-                                <i class="fa-solid fa-cow text-4xl text-white"></i>
-                            </div>
-                            <h3 class="text-2xl font-bold leading-6 text-white" id="modal-title">Dijital Mandıra</h3>
-                            <p class="mt-2 text-sm text-brand-100 font-medium">Modern Çiftlik & Süt Yönetim Platformu</p>
-                        </div>
-                        
-                        <!-- Kapatma Butonu -->
-                        <button type="button" onclick="closeGlobalHakkinda()" class="absolute top-4 right-4 text-white/70 hover:text-white transition-colors bg-black/10 hover:bg-black/20 rounded-full p-2 w-8 h-8 flex items-center justify-center cursor-pointer z-20">
-                            <i class="fa-solid fa-xmark text-lg"></i>
-                        </button>
-                    </div>
-
-                    <!-- İçerik Gövdesi -->
-                    <div class="px-4 py-5 sm:p-6 bg-white">
-                        <div class="space-y-6">
-                            
-                            <!-- Versiyon Bilgisi -->
-                            <div class="text-center">
-                                <span class="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 mb-3">
-                                    Sürüm v{{ APP_VERSION }}
-                                </span>
-                                <p class="text-sm text-gray-500 leading-relaxed">
-                                    Süt toplama süreçlerinizi dijitalleştirin, finansal takibinizi kolaylaştırın ve verimliliğinizi artırın.
-                                </p>
-                            </div>
-
-                            <!-- Özellikler Grid -->
-                            <div class="grid grid-cols-2 gap-4">
-                                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center hover:bg-brand-50 hover:border-brand-200 transition-all duration-300 group">
-                                    <div class="w-10 h-10 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-2 group-hover:scale-110 transition-transform">
-                                        <i class="fa-solid fa-bucket text-brand-500 text-lg"></i>
-                                    </div>
-                                    <h4 class="font-semibold text-gray-900 text-sm">Süt Takibi</h4>
-                                    <p class="text-[10px] text-gray-500 mt-0.5">Litre ve fiyat kaydı</p>
-                                </div>
-                                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center hover:bg-green-50 hover:border-green-200 transition-all duration-300 group">
-                                    <div class="w-10 h-10 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-2 group-hover:scale-110 transition-transform">
-                                        <i class="fa-solid fa-coins text-green-500 text-lg"></i>
-                                    </div>
-                                    <h4 class="font-semibold text-gray-900 text-sm">Finans</h4>
-                                    <p class="text-[10px] text-gray-500 mt-0.5">Alacak/Verecek</p>
-                                </div>
-                                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center hover:bg-purple-50 hover:border-purple-200 transition-all duration-300 group">
-                                    <div class="w-10 h-10 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-2 group-hover:scale-110 transition-transform">
-                                        <i class="fa-solid fa-file-pdf text-purple-500 text-lg"></i>
-                                    </div>
-                                    <h4 class="font-semibold text-gray-900 text-sm">Raporlar</h4>
-                                    <p class="text-[10px] text-gray-500 mt-0.5">PDF & Detaylı Analiz</p>
-                                </div>
-                                <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-center hover:bg-orange-50 hover:border-orange-200 transition-all duration-300 group">
-                                    <div class="w-10 h-10 mx-auto bg-white rounded-full flex items-center justify-center shadow-sm mb-2 group-hover:scale-110 transition-transform">
-                                        <i class="fa-solid fa-wifi text-orange-500 text-lg"></i>
-                                    </div>
-                                    <h4 class="font-semibold text-gray-900 text-sm">Çevrimdışı</h4>
-                                    <p class="text-[10px] text-gray-500 mt-0.5">İnternetsiz Çalışma</p>
-                                </div>
-                            </div>
-
-                            <!-- İletişim -->
-                            <div class="bg-gradient-to-r from-gray-50 to-white rounded-xl p-4 border border-gray-100">
-                                <h4 class="text-sm font-bold text-gray-900 mb-3 text-center">İletişim & Destek</h4>
-                                <div class="flex flex-col gap-2">
-                                    <a href="https://wa.me/905539571515" target="_blank" class="flex items-center justify-center w-full bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 py-2 px-4 rounded-lg transition-colors text-sm font-medium border border-green-200">
-                                        <i class="fa-brands fa-whatsapp text-lg mr-2"></i> WhatsApp Destek
-                                    </a>
-                                    <div class="text-center mt-2">
-                                        <p class="text-xs text-gray-400">© 2025 Dijital Mandıra. Tüm Hakları Saklıdır.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Alt Çizgi (Dekoratif) -->
-                    <div class="h-1.5 w-full bg-gradient-to-r from-brand-400 via-brand-600 to-brand-400"></div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- NOT: GLOBAL HAKKINDA MODALI BURADAN KALDIRILDI VE _hizli_islemler.html İÇİNE TAŞINDI -->
+    <!-- Bu sayede base.html kullanmayan sayfalarda da (Örn: Finans) modal çalışacaktır. -->
 
     <!-- Şifre Değiştir Modal -->
     <div id="sifreDegistirModal" class="fixed inset-0 z-[100] hidden" role="dialog" aria-modal="true">
@@ -231,7 +135,6 @@
     </div>
 
     <!-- Global Fonksiyonlar ve Modal JS -->
-    <!-- KRİTİK DÜZELTME: openGlobalHakkinda artık en dışta tanımlanıyor -->
     <script>
         // Temel Modal Toggle
         function toggleModal(modalId, show) {
@@ -242,38 +145,7 @@
             }
         }
 
-        // GLOBAL: Hakkında Modalı Açma/Kapama (Window nesnesine ekliyoruz)
-        window.openGlobalHakkinda = function() {
-            console.log("Hakkında açılıyor...");
-            const modal = document.getElementById('global-hakkinda-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                // Animasyon
-                const innerDiv = modal.querySelector('div[class*="transform"]');
-                if(innerDiv) {
-                    innerDiv.classList.add('scale-100', 'opacity-100');
-                    innerDiv.classList.remove('scale-95', 'opacity-0');
-                }
-            } else {
-                console.error("Hakkında modalı bulunamadı!");
-            }
-        };
-
-        window.closeGlobalHakkinda = function() {
-            const modal = document.getElementById('global-hakkinda-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-            }
-        };
-
-        // ESC ile Kapatma
-        document.addEventListener('keydown', function(event) {
-            if (event.key === "Escape") {
-                if (typeof window.closeGlobalHakkinda === 'function') {
-                    window.closeGlobalHakkinda();
-                }
-            }
-        });
+        // NOT: openGlobalHakkinda() fonksiyonu artık _hizli_islemler.html içinde tanımlıdır.
     </script>
 
     <script src="{{ url_for('static', filename='theme.js') }}"></script>
