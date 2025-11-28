@@ -46,11 +46,29 @@ class FinansService:
     def add_transaction(self, sirket_id: int, kullanici_id: int, data: dict):
         try:
             islem_tipi = data.get('islem_tipi')
-            tedarikci_id = data.get('tedarikci_id')
+            tedarikci_id = data.get('tedarikci_id') # Artık None olabilir
             tutar = data.get('tutar')
+            muhatap_adi = sanitize_input(data.get('muhatap_adi')) # Yeni alan (opsiyonel)
+            aciklama = sanitize_input(data.get('aciklama')) or ""
 
-            if not all([islem_tipi, tedarikci_id, tutar]):
-                raise ValueError("Lütfen tüm zorunlu alanları doldurun.")
+            # Tedarikçi ID'si boş gelebilir, string 'null' veya boş string ise None yap
+            if not tedarikci_id or str(tedarikci_id).lower() in ['null', '']:
+                tedarikci_id = None
+
+            # Eğer tedarikçi seçilmediyse ve muhatap adı girildiyse, bunu açıklamaya ekle
+            # (Veritabanında ayrı sütun açmadığımız için bu pratik bir çözüm)
+            if not tedarikci_id and muhatap_adi:
+                aciklama = f"Muhatap: {muhatap_adi} - {aciklama}"
+                aciklama = aciklama.strip(" -") # Eğer asıl açıklama boşsa tireyi temizle
+
+            # Temel Validasyonlar
+            if not islem_tipi or not tutar:
+                raise ValueError("İşlem tipi ve tutar zorunludur.")
+            
+            # Eğer işlem tipi Ödeme/Avans/Tahsilat ise Tedarikçi ZORUNLU olmalı
+            temel_tipler = [FinansIslemTipi.ODEME.value, FinansIslemTipi.AVANS.value, FinansIslemTipi.TAHSILAT.value]
+            if islem_tipi in temel_tipler and not tedarikci_id:
+                 raise ValueError(f"{islem_tipi} işlemi için bir tedarikçi seçmelisiniz.")
 
             gecerli_tipler = [tip.value for tip in FinansIslemTipi] 
             if islem_tipi not in gecerli_tipler:
@@ -62,11 +80,11 @@ class FinansService:
 
             yeni_islem = {
                 "sirket_id": sirket_id,
-                "tedarikci_id": tedarikci_id,
+                "tedarikci_id": tedarikci_id, # None olabilir
                 "kullanici_id": kullanici_id,
                 "islem_tipi": islem_tipi,
                 "tutar": str(tutar_decimal),
-                "aciklama": sanitize_input(data.get('aciklama')) or None,
+                "aciklama": aciklama if aciklama else None,
                 "islem_tarihi": data.get('islem_tarihi') or None
             }
             if not yeni_islem["islem_tarihi"]:
@@ -75,7 +93,6 @@ class FinansService:
             # Ekleme işlemini yap ve veriyi geri al
             response = g.supabase.table('finansal_islemler').insert(yeni_islem).execute()
             
-            # DÖNÜŞ FORMATI: Hem mesajı hem de veriyi dönüyor
             return {
                 "message": f"{islem_tipi} işlemi başarıyla kaydedildi.",
                 "data": response.data[0]

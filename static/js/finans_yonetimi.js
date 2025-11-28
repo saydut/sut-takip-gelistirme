@@ -13,7 +13,29 @@ window.onload = function() {
 
     tedarikcileriDoldur();
     finansalIslemleriYukle(1);
+    islemTipiDegisti(); // Başlangıçta doğru alanı göster
 };
+
+// --- YENİ: İşlem Tipi Değişince Çalışacak Fonksiyon ---
+function islemTipiDegisti() {
+    const tip = document.getElementById('islem-tipi-sec').value;
+    const tedarikciDiv = document.getElementById('tedarikci-secim-alani');
+    const muhatapDiv = document.getElementById('muhatap-giris-alani');
+    const bakiyeInput = document.getElementById('tutar-input'); // Placeholder için
+
+    if (['Diğer Gelir', 'Diğer Gider'].includes(tip)) {
+        // Tedarikçisiz işlem
+        tedarikciDiv.classList.add('hidden');
+        muhatapDiv.classList.remove('hidden');
+        if(tedarikciSecici) tedarikciSecici.clear(); // Seçimi temizle
+        bakiyeInput.placeholder = "0.00"; // Bakiyeyi sıfırla
+    } else {
+        // Tedarikçili işlem
+        tedarikciDiv.classList.remove('hidden');
+        muhatapDiv.classList.add('hidden');
+        document.getElementById('muhatap-input').value = ''; // Muhatabı temizle
+    }
+}
 
 // --- GÖRÜNÜM ---
 function gorunumuDegistir(v) { finansMevcutGorunum = v; localStorage.setItem('finansGorunum', v); gorunumuAyarla(v); finansalIslemleriYukle(1); }
@@ -53,13 +75,31 @@ function renderFinansAsTable(container, islemler) {
     container.innerHTML = '';
     islemler.forEach(islem => {
         const tarih = new Date(islem.islem_tarihi).toLocaleString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-        const tipClass = islem.islem_tipi === 'Tahsilat' ? 'bg-blue-50 text-blue-700 border-blue-100' : (islem.islem_tipi === 'Ödeme' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-yellow-50 text-yellow-700 border-yellow-100');
-        const tutarClass = islem.islem_tipi === 'Tahsilat' ? 'text-green-600' : 'text-red-600';
+        
+        // Renk Sınıfları
+        let tipClass, tutarClass;
+        if (['Tahsilat', 'Diğer Gelir', 'Yem Satışı', 'Süt Satışı'].includes(islem.islem_tipi)) {
+            tipClass = 'bg-blue-50 text-blue-700 border-blue-100';
+            tutarClass = 'text-green-600'; // Gelirler yeşil
+        } else {
+            tipClass = islem.islem_tipi === 'Ödeme' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-yellow-50 text-yellow-700 border-yellow-100';
+            tutarClass = 'text-red-600'; // Giderler kırmızı
+        }
+
+        // Muhatap Adı Gösterimi (Tedarikçi yoksa açıklamadaki 'Muhatap:' kısmını veya '-' göster)
+        let muhatapAdi = islem.tedarikciler?.isim;
+        if (!muhatapAdi) {
+             // Açıklamadan "Muhatap: X - " kısmını parse etmeye çalışabiliriz veya direkt "-" diyebiliriz.
+             // Ama basitlik için, eğer tedarikçi yoksa ve açıklama varsa açıklamayı, yoksa 'Diğer' yazalım.
+             muhatapAdi = '<span class="text-gray-400 italic">Diğer</span>';
+        } else {
+            muhatapAdi = utils.sanitizeHTML(muhatapAdi);
+        }
         
         container.innerHTML += `
             <tr id="finans-islem-${islem.id}" class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tarih}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${utils.sanitizeHTML(islem.tedarikciler?.isim || '-')}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${muhatapAdi}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm"><span class="px-2 py-1 rounded-md text-xs font-semibold border ${tipClass}">${utils.sanitizeHTML(islem.islem_tipi)}</span></td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono font-bold ${tutarClass}">${parseFloat(islem.tutar).toFixed(2)} TL</td>
                 <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">${utils.sanitizeHTML(islem.aciklama) || '-'}</td>
@@ -75,18 +115,32 @@ function renderFinansAsCards(container, islemler) {
     container.innerHTML = '';
     islemler.forEach(islem => {
         const tarih = new Date(islem.islem_tarihi).toLocaleString('tr-TR', { dateStyle: 'short' });
-        const borderClass = islem.islem_tipi === 'Tahsilat' ? 'border-l-4 border-l-blue-500' : (islem.islem_tipi === 'Ödeme' ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-yellow-500');
-        const tutarClass = islem.islem_tipi === 'Tahsilat' ? 'text-green-600' : 'text-red-600';
         
+        let borderClass = 'border-l-4 border-gray-200';
+        let tutarClass = 'text-gray-800';
+        let badgeClass = 'bg-gray-100 text-gray-800';
+
+        if (['Tahsilat', 'Diğer Gelir'].includes(islem.islem_tipi)) {
+             borderClass = 'border-l-4 border-l-blue-500'; 
+             tutarClass = 'text-green-600'; 
+             badgeClass = 'bg-blue-100 text-blue-800';
+        } else {
+             borderClass = islem.islem_tipi === 'Ödeme' ? 'border-l-4 border-l-green-500' : 'border-l-4 border-l-yellow-500';
+             tutarClass = 'text-red-600';
+             badgeClass = islem.islem_tipi === 'Ödeme' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+        }
+
+        const muhatap = islem.tedarikciler?.isim ? utils.sanitizeHTML(islem.tedarikciler.isim) : 'Diğer';
+
         container.innerHTML += `
             <div class="col-span-1" id="finans-islem-${islem.id}">
                 <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm ${borderClass}">
                     <div class="flex justify-between items-start mb-2">
-                        <h4 class="font-bold text-gray-900">${utils.sanitizeHTML(islem.tedarikciler?.isim || '-')}</h4>
+                        <h4 class="font-bold text-gray-900">${muhatap}</h4>
                         <span class="text-xs text-gray-400">${tarih}</span>
                     </div>
                     <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-semibold bg-gray-100 px-2 py-1 rounded text-gray-600">${utils.sanitizeHTML(islem.islem_tipi)}</span>
+                        <span class="text-xs font-semibold ${badgeClass} px-2 py-1 rounded">${utils.sanitizeHTML(islem.islem_tipi)}</span>
                         <span class="font-mono font-bold ${tutarClass}">${parseFloat(islem.tutar).toFixed(2)} TL</span>
                     </div>
                     <p class="text-sm text-gray-500 mb-3 italic">${utils.sanitizeHTML(islem.aciklama) || ''}</p>
@@ -111,7 +165,10 @@ async function tedarikcileriDoldur() {
 async function guncelBakiyeyiGetir(id) {
     const inp = document.getElementById('tutar-input');
     if(!inp) return;
+    
+    // Tedarikçi seçili değilse bakiye gösterme
     if(!id) { inp.placeholder="0.00"; return; }
+    
     inp.placeholder="Yükleniyor...";
     try {
         const ozet = await api.request(`/api/tedarikci/${id}/ozet`);
@@ -122,21 +179,37 @@ async function guncelBakiyeyiGetir(id) {
 
 function formuTemizle() {
     document.getElementById('islem-tipi-sec').value = 'Ödeme';
+    islemTipiDegisti(); // UI'yı sıfırla
     tedarikciSecici.clear();
+    document.getElementById('muhatap-input').value = '';
     document.getElementById('tutar-input').value = '';
     document.getElementById('aciklama-input').value = '';
     if(tarihSecici) tarihSecici.clear();
 }
 
 async function finansalIslemKaydet() {
+    const islemTipi = document.getElementById('islem-tipi-sec').value;
+    const tedarikciId = tedarikciSecici.getValue();
+    const muhatapAdi = document.getElementById('muhatap-input').value.trim();
+    
     const veri = {
-        islem_tipi: document.getElementById('islem-tipi-sec').value,
-        tedarikci_id: tedarikciSecici.getValue(),
+        islem_tipi: islemTipi,
+        tedarikci_id: tedarikciId || null, // Boşsa null gönder
+        muhatap_adi: muhatapAdi,
         tutar: document.getElementById('tutar-input').value,
         islem_tarihi: tarihSecici && tarihSecici.selectedDates[0] ? tarihSecici.selectedDates[0].toISOString().slice(0, 19).replace('T', ' ') : null,
         aciklama: document.getElementById('aciklama-input').value.trim()
     };
-    if (!veri.islem_tipi || !veri.tedarikci_id || !veri.tutar || parseFloat(veri.tutar) <= 0) { gosterMesaj('Alanları doldurun.', 'warning'); return; }
+
+    // Validasyon: Eğer tedarikçili bir işlem tipiyse tedarikçi şart
+    if (['Ödeme', 'Avans', 'Tahsilat'].includes(islemTipi) && !veri.tedarikci_id) {
+        gosterMesaj('Lütfen bir tedarikçi seçin.', 'warning'); return;
+    }
+    // Diğer işlem tiplerindeyse en azından muhatap veya açıklama olsa iyi olur ama zorunlu değil.
+    // Tutar zorunlu
+    if (!veri.islem_tipi || !veri.tutar || parseFloat(veri.tutar) <= 0) { 
+        gosterMesaj('Lütfen tutarı ve işlem tipini girin.', 'warning'); return; 
+    }
 
     if (!navigator.onLine) {
         const ok = await kaydetFinansIslemiCevrimdisi(veri);
