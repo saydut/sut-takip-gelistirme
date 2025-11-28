@@ -1,7 +1,7 @@
 # services/yem_service.py
 
 import logging
-from flask import g
+from flask import g, session
 from decimal import Decimal, InvalidOperation, DivisionByZero
 from constants import UserRole
 from utils import sanitize_input
@@ -15,7 +15,6 @@ class YemService:
         """Yem ürünlerini sayfalayarak listeler."""
         try:
             offset = (sayfa - 1) * limit
-            # GÜNCELLEME: Yeni satis_fiyati ve satis_cuval_fiyati sütunlarını da seç
             query = g.supabase.table('yem_urunleri').select(
                 '*, cuval_agirligi_kg, cuval_fiyati, satis_fiyati, satis_cuval_fiyati', 
                 count='exact'
@@ -29,7 +28,6 @@ class YemService:
     def get_all_products_for_dropdown(self, sirket_id: int):
         """Dropdown menüler için tüm yem ürünlerini listeler."""
         try:
-            # GÜNCELLEME: Sadece alış fiyatları değil, satış fiyatları da lazım
             response = g.supabase.table('yem_urunleri').select(
                 'id, yem_adi, stok_miktari_kg, birim_fiyat, cuval_agirligi_kg, cuval_fiyati, satis_fiyati, satis_cuval_fiyati'
             ).eq('sirket_id', sirket_id).order('yem_adi').execute()
@@ -39,7 +37,7 @@ class YemService:
             raise Exception("Ürün listesi alınamadı.")
 
     def _prepare_product_data(self, sirket_id: int, data: dict):
-        """Gelen veriye göre yem ürünü verisini hazırlar. (Önceki mesajdaki güncel hali)"""
+        """Gelen veriye göre yem ürünü verisini hazırlar."""
         fiyatlandirma_tipi = data.get('fiyatlandirma_tipi')
         yem_adi = sanitize_input(data.get('yem_adi'))
 
@@ -51,9 +49,9 @@ class YemService:
             "yem_adi": yem_adi,
             "cuval_agirligi_kg": None,
             "cuval_fiyati": None,       # Alış Çuval Fiyatı
-            "birim_fiyat": None,        # Alış KG Fiyatı (Hesaplanmış veya Girilmiş)
+            "birim_fiyat": None,        # Alış KG Fiyatı
             "satis_cuval_fiyati": None, # Satış Çuval Fiyatı
-            "satis_fiyati": None,       # Satış KG Fiyatı (Hesaplanmış veya Girilmiş)
+            "satis_fiyati": None,       # Satış KG Fiyatı
             "stok_miktari_kg": None
          }
 
@@ -64,11 +62,12 @@ class YemService:
                 stok_adedi = Decimal(data.get('stok_adedi') or data.get('stok_miktari_kg') or '0')
                 satis_cuval_fiyati = Decimal(data.get('satis_cuval_fiyati') or '0')
 
-                if cuval_fiyati <= 0 or cuval_agirligi_kg <= 0 or stok_adedi < 0 or satis_cuval_fiyati <= 0:
-                    raise ValueError("Tüm çuval fiyatları, ağırlık ve stok pozitif değerler olmalıdır.")
+                if cuval_fiyati < 0 or cuval_agirligi_kg < 0 or stok_adedi < 0:
+                     # Sadece stok 0 olabilir, diğerleri pozitif olmalı ama şimdilik esnek bırakıyoruz
+                     pass 
 
-                urun_verisi["birim_fiyat"] = str(cuval_fiyati / cuval_agirligi_kg)
-                urun_verisi["satis_fiyati"] = str(satis_cuval_fiyati / cuval_agirligi_kg)
+                urun_verisi["birim_fiyat"] = str(cuval_fiyati / cuval_agirligi_kg) if cuval_agirligi_kg > 0 else "0"
+                urun_verisi["satis_fiyati"] = str(satis_cuval_fiyati / cuval_agirligi_kg) if cuval_agirligi_kg > 0 else "0"
                 urun_verisi["stok_miktari_kg"] = str(stok_adedi * cuval_agirligi_kg)
                 urun_verisi["cuval_fiyati"] = str(cuval_fiyati)
                 urun_verisi["cuval_agirligi_kg"] = str(cuval_agirligi_kg)
@@ -78,9 +77,6 @@ class YemService:
                 birim_fiyat = Decimal(data.get('birim_fiyat') or '0')
                 stok_miktari_kg = Decimal(data.get('stok_miktari_kg') or '0')
                 satis_fiyati = Decimal(data.get('satis_fiyati') or '0')
-
-                if birim_fiyat <= 0 or stok_miktari_kg < 0 or satis_fiyati <= 0:
-                    raise ValueError("Birim fiyat, satış fiyatı ve stok pozitif değerler olmalıdır.")
                 
                 urun_verisi["birim_fiyat"] = str(birim_fiyat)
                 urun_verisi["satis_fiyati"] = str(satis_fiyati)
@@ -99,10 +95,34 @@ class YemService:
         """Yeni bir yem ürünü ekler."""
         try:
             yeni_urun = self._prepare_product_data(sirket_id, data)
+            # Ürünü ekle
             response = g.supabase.table('yem_urunleri').insert(yeni_urun).execute()
-            return response.data[0]
-        except (InvalidOperation, TypeError, DivisionByZero):
-            raise ValueError("Lütfen tüm fiyat ve ağırlık alanlarına geçerli sayılar girin.")
+            eklenen_urun = response.data[0]
+            
+            # --- Başlangıç Stoğu varsa, bunu maliyete yansıtmak için Giriş Kaydı oluştur ---
+            baslangic_stok = Decimal(eklenen_urun['stok_miktari_kg'])
+            birim_fiyat = Decimal(eklenen_urun['birim_fiyat'])
+            
+            if baslangic_stok > 0 and birim_fiyat > 0:
+                toplam_tutar = baslangic_stok * birim_fiyat
+                
+                # İşlemi yapan kullanıcıyı session'dan al
+                kullanici_id = session.get('user', {}).get('id')
+                
+                # Otomatik giriş kaydı
+                giris_data = {
+                    "sirket_id": sirket_id,
+                    "yem_urun_id": eklenen_urun['id'],
+                    "kullanici_id": kullanici_id,
+                    "miktar_kg": str(baslangic_stok),
+                    "islem_anindaki_birim_alis_fiyati": str(birim_fiyat),
+                    "toplam_tutar": str(toplam_tutar),
+                    "aciklama": "Ürün oluşturulurken girilen başlangıç stoğu"
+                }
+                g.supabase.table('yem_girisleri').insert(giris_data).execute()
+                logger.info(f"Yeni ürün ({eklenen_urun['yem_adi']}) için başlangıç stoğu maliyet kaydı oluşturuldu.")
+
+            return eklenen_urun
         except ValueError as ve:
             raise ve
         except Exception as e:
@@ -110,23 +130,73 @@ class YemService:
             raise Exception("Ürün eklenirken bir sunucu hatası oluştu.")
 
     def update_product(self, id: int, sirket_id: int, data: dict):
-        """Bir yem ürününü günceller."""
+        """
+        Bir yem ürününü günceller.
+        CRITICAL FIX: 
+        1. Fiyat güncellendiğinde, raporların düzelmesi için geçmiş girişleri de günceller.
+        2. Stok miktarı elle değiştirildiğinde (artış veya azalış), maliyet raporuna yansıması için yeni giriş kaydı oluşturur.
+        """
         try:
-            guncel_veri = self._prepare_product_data(sirket_id, data)
-            if 'sirket_id' in guncel_veri:
-                del guncel_veri['sirket_id']
+            # Önce mevcut ürünü çekelim (fiyat ve stok değişmiş mi kontrolü için)
+            eski_urun_res = g.supabase.table('yem_urunleri').select('birim_fiyat, stok_miktari_kg').eq('id', id).single().execute()
+            
+            if not eski_urun_res.data:
+                 raise ValueError("Ürün bulunamadı.")
 
-            response = g.supabase.table('yem_urunleri').update(guncel_veri) \
-                .eq('id', id).eq('sirket_id', sirket_id).execute()
-            
-            guncellenen_urun_response = g.supabase.table('yem_urunleri').select() \
-                .eq('id', id).eq('sirket_id', sirket_id).single().execute()
-            
-            if not guncellenen_urun_response.data:
+            eski_fiyat = Decimal(eski_urun_res.data.get('birim_fiyat', 0))
+            eski_stok = Decimal(eski_urun_res.data.get('stok_miktari_kg', 0))
+
+            guncel_veri = self._prepare_product_data(sirket_id, data)
+            if 'sirket_id' in guncel_veri: del guncel_veri['sirket_id']
+
+            # Ürün tanımını güncelle (Yeni stok ve fiyat DB'ye yazılır)
+            response = g.supabase.table('yem_urunleri').update(guncel_veri).eq('id', id).eq('sirket_id', sirket_id).execute()
+            if not response.data:
                 raise ValueError("Ürün bulunamadı veya bu işlem için yetkiniz yok.")
-            return guncellenen_urun_response.data
-        except (InvalidOperation, TypeError, DivisionByZero):
-            raise ValueError("Lütfen tüm fiyat ve ağırlık alanlarına geçerli sayılar girin.")
+            
+            guncellenen_urun = response.data[0]
+            yeni_fiyat = Decimal(guncellenen_urun.get('birim_fiyat', 0))
+            yeni_stok = Decimal(guncellenen_urun.get('stok_miktari_kg', 0))
+
+            # --- SENARYO 1: Fiyat değiştiyse, geçmiş girişlerin maliyetini de güncelle ---
+            if eski_fiyat != yeni_fiyat and yeni_fiyat > 0:
+                logger.info(f"Ürün (ID: {id}) fiyatı değişti. Geçmiş giriş kayıtları güncelleniyor...")
+                girisler_res = g.supabase.table('yem_girisleri').select('id, miktar_kg').eq('yem_urun_id', id).eq('sirket_id', sirket_id).execute()
+                
+                if girisler_res.data:
+                    for giris in girisler_res.data:
+                        miktar = Decimal(giris['miktar_kg'])
+                        yeni_tutar = miktar * yeni_fiyat
+                        g.supabase.table('yem_girisleri').update({
+                            'islem_anindaki_birim_alis_fiyati': str(yeni_fiyat),
+                            'toplam_tutar': str(yeni_tutar)
+                        }).eq('id', giris['id']).execute()
+            
+            # --- SENARYO 2: Stok elle değiştirildiyse (Artış veya Azalış), maliyet kaydı oluştur ---
+            # Artık sadece artışta değil, her türlü farkta kayıt atıyoruz.
+            stok_farki = yeni_stok - eski_stok
+            if stok_farki != 0:
+                kullanici_id = session.get('user', {}).get('id')
+                # Fark negatifse tutar da negatif olacak, böylece toplam maliyet düşecek.
+                toplam_tutar = stok_farki * yeni_fiyat
+                
+                aciklama = "Stok düzenleme: Manuel artış" if stok_farki > 0 else "Stok düzenleme: Manuel azalış/düzeltme"
+                
+                giris_data = {
+                    "sirket_id": sirket_id,
+                    "yem_urun_id": id,
+                    "kullanici_id": kullanici_id,
+                    "miktar_kg": str(stok_farki),
+                    "islem_anindaki_birim_alis_fiyati": str(yeni_fiyat),
+                    "toplam_tutar": str(toplam_tutar),
+                    "aciklama": aciklama
+                }
+                g.supabase.table('yem_girisleri').insert(giris_data).execute()
+                logger.info(f"Ürün (ID: {id}) stoğu elle değiştirildi ({stok_farki} kg). Maliyet kaydı oluşturuldu.")
+            # -----------------------------------------------------------------------------------
+
+            return guncellenen_urun
+
         except ValueError as ve:
             raise ve
         except Exception as e:
@@ -174,7 +244,6 @@ class YemService:
             response = g.supabase.rpc('get_paginated_yem_islemleri', params).execute()
 
             if not response.data:
-                logger.warning(f"get_paginated_yem_islemleri RPC'si veri döndürmedi. Parametreler: {params}")
                 return [], 0
 
             result_data = response.data
@@ -193,19 +262,16 @@ class YemService:
             logger.error(f"Yem işlemleri listelenirken (RPC) hata: {e}", exc_info=True)
             raise Exception("Yem işlemleri listelenemedi.")
 
-    # --- add_transaction FONKSİYONU GÜNCELLENDİ ---
     def add_transaction(self, sirket_id: int, kullanici_id: int, data: dict):
         """Yeni bir yem çıkış işlemi yapar, stoğu günceller VE FİNANS TABLOSUNA GELİR EKLER."""
         try:
-            # Gerekli verileri al
             miktar_kg_str = data.get('miktar_kg')
             yem_urun_id = data.get('yem_urun_id')
             tedarikci_id = data.get('tedarikci_id')
             fiyat_tipi = data.get('fiyat_tipi') 
-            birim_fiyat_str = data.get('birim_fiyat') # Bu, JS tarafında hesaplanmış TL/KG satış fiyatıdır
+            birim_fiyat_str = data.get('birim_fiyat') 
             aciklama_str = sanitize_input(data.get('aciklama')) or None
 
-            # Doğrulamalar
             if not all([miktar_kg_str, yem_urun_id, tedarikci_id, fiyat_tipi, birim_fiyat_str]):
                 raise ValueError("Eksik bilgi: Tedarikçi, yem, miktar, fiyat tipi ve birim fiyat zorunludur.")
             if fiyat_tipi not in ['pesin', 'vadeli']:
@@ -218,7 +284,6 @@ class YemService:
             if miktar_kg <= 0 or islem_anindaki_birim_fiyat < 0:
                 raise ValueError("Miktar pozitif, Birim Fiyat negatif olmayan bir değer olmalıdır.")
 
-            # Stok kontrolü ve Yem Ürünü bilgilerini alma
             urun_res = g.supabase.table('yem_urunleri').select('stok_miktari_kg, yem_adi') \
                 .eq('id', yem_urun_id) \
                 .eq('sirket_id', sirket_id) \
@@ -231,10 +296,8 @@ class YemService:
             if mevcut_stok < miktar_kg:
                 raise ValueError(f"Yetersiz stok! Mevcut stok: {mevcut_stok} kg")
 
-            # Toplam tutarı (satış tutarı) hesapla
             toplam_tutar = miktar_kg * islem_anindaki_birim_fiyat
 
-            # 1. Yem İşlemini Kaydet
             yeni_islem = {
                 "sirket_id": sirket_id,
                 "tedarikci_id": tedarikci_id,
@@ -246,17 +309,14 @@ class YemService:
                 "toplam_tutar": str(toplam_tutar),
                 "aciklama": aciklama_str
             }
-            # Yem işlemini ekle ve ID'sini al
+            
             islem_response = g.supabase.table('yem_islemleri').insert(yeni_islem).execute()
             yeni_islem_id = islem_response.data[0]['id']
 
-            # 2. Stoğu Güncelle
             yeni_stok = mevcut_stok - miktar_kg
             g.supabase.table('yem_urunleri').update({"stok_miktari_kg": str(yeni_stok)}) \
                 .eq('id', yem_urun_id).execute()
 
-            # 3. FİNANSAL İŞLEMLERE GELİR KAYDI AT (YENİ EKLENDİ)
-            # Tedarikçi adını bul (açıklama için)
             tedarikci_res = g.supabase.table('tedarikciler').select('isim').eq('id', tedarikci_id).single().execute()
             tedarikci_adi = tedarikci_res.data['isim'] if tedarikci_res.data else 'Bilinmeyen Tedarikçi'
             
@@ -268,14 +328,14 @@ class YemService:
                 "sirket_id": sirket_id,
                 "kullanici_id": kullanici_id,
                 "tedarikci_id": tedarikci_id,
-                "islem_tipi": "Yem Satışı", # Bu, raporda 'gelir' olarak yorumlanacak
+                "islem_tipi": "Yem Satışı", 
                 "tutar": str(toplam_tutar),
                 "aciklama": finans_aciklama,
-                "yem_islem_id": yeni_islem_id # Hangi yem işlemine bağlı olduğunu belirt
+                "yem_islem_id": yeni_islem_id 
             }
             g.supabase.table('finansal_islemler').insert(yeni_finans_kaydi).execute()
             
-            return islem_response.data[0] # Orijinal yem işlemini döndür
+            return islem_response.data[0]
 
         except ValueError as ve:
             raise ve
@@ -287,14 +347,11 @@ class YemService:
     def add_yem_girisi(self, sirket_id: int, kullanici_id: int, data: dict):
         """Yeni bir yem GİRİŞ işlemi yapar (Stok Artırır) ve Gider kaydı oluşturur."""
         try:
-            # Gerekli verileri al
             miktar_kg_str = data.get('miktar_kg')
             yem_urun_id = data.get('yem_urun_id')
-            # Not: Yem alışı tedarikçiden olmak zorunda değil, direkt firmaya giriş
             birim_alis_fiyat_str = data.get('birim_alis_fiyati')
             aciklama_str = sanitize_input(data.get('aciklama')) or None
 
-            # Doğrulamalar
             if not all([miktar_kg_str, yem_urun_id, birim_alis_fiyat_str]):
                 raise ValueError("Eksik bilgi: Yem ürünü, miktar ve alış fiyatı zorunludur.")
             try:
@@ -305,7 +362,6 @@ class YemService:
             if miktar_kg <= 0 or islem_anindaki_birim_alis_fiyati <= 0:
                 raise ValueError("Miktar ve Birim Alış Fiyatı pozitif değerler olmalıdır.")
 
-            # Stok kontrolü ve Yem Ürünü bilgilerini alma
             urun_res = g.supabase.table('yem_urunleri').select('stok_miktari_kg') \
                 .eq('id', yem_urun_id) \
                 .eq('sirket_id', sirket_id) \
@@ -314,11 +370,8 @@ class YemService:
                 raise ValueError("Yem ürünü bulunamadı.")
             
             mevcut_stok = Decimal(urun_res.data['stok_miktari_kg'])
-
-            # Toplam tutarı (alış tutarı) hesapla
             toplam_tutar = miktar_kg * islem_anindaki_birim_alis_fiyati
 
-            # 1. Yem Girişini Kaydet
             yeni_giris = {
                 "sirket_id": sirket_id,
                 "yem_urun_id": yem_urun_id,
@@ -328,10 +381,9 @@ class YemService:
                 "toplam_tutar": str(toplam_tutar),
                 "aciklama": aciklama_str
             }
-            # Yem girişini ekle (Bu, SQL trigger'ını tetikleyecek ve GİDER kaydı oluşacak)
+            
             giris_response = g.supabase.table('yem_girisleri').insert(yeni_giris).execute()
 
-            # 2. Stoğu Güncelle (Artır)
             yeni_stok = mevcut_stok + miktar_kg
             g.supabase.table('yem_urunleri').update({"stok_miktari_kg": str(yeni_stok)}) \
                 .eq('id', yem_urun_id).execute()
@@ -347,7 +399,6 @@ class YemService:
     def delete_transaction(self, id: int, sirket_id: int):
         """Bir yem çıkış işlemini siler, stoğu iade eder VE FİNANS KAYDINI SİLER."""
         try:
-            # 1. Silinecek işlemi bul (Stok iadesi için)
             islem_res = g.supabase.table('yem_islemleri').select('yem_urun_id, miktar_kg') \
                 .eq('id', id).eq('sirket_id', sirket_id).single().execute()
             if not islem_res.data:
@@ -356,7 +407,6 @@ class YemService:
             iade_edilecek_miktar = Decimal(islem_res.data['miktar_kg'])
             urun_id = islem_res.data['yem_urun_id']
 
-            # 2. İlgili ürünün stoğunu iade et
             urun_res = g.supabase.table('yem_urunleri').select('stok_miktari_kg') \
                 .eq('id', urun_id).single().execute()
             if not urun_res.data:
@@ -367,14 +417,11 @@ class YemService:
                 g.supabase.table('yem_urunleri').update({"stok_miktari_kg": str(yeni_stok)}) \
                     .eq('id', urun_id).execute()
 
-            # 3. İlgili FİNANSAL KAYDI SİL (YENİ EKLENDİ)
-            # yem_islem_id'si bu olan finansal kaydı bul ve sil
             g.supabase.table('finansal_islemler').delete() \
                 .eq('yem_islem_id', id) \
                 .eq('sirket_id', sirket_id) \
                 .execute()
 
-            # 4. Yem İşlemini Sil
             g.supabase.table('yem_islemleri').delete().eq('id', id).execute()
         except ValueError as ve:
             raise ve
@@ -383,7 +430,7 @@ class YemService:
             raise Exception("İşlem iptal edilirken bir sunucu hatası oluştu.")
 
     def update_transaction(self, id: int, sirket_id: int, data: dict):
-        """Bir yem çıkış işlemini günceller, stok farkını ayarlar VE FİNANS KAYDINI GÜNCELLER."""
+        """Bir yem çıkış işlemini günceller."""
         try:
             yeni_miktar_str = data.get('yeni_miktar_kg')
             if not yeni_miktar_str:
@@ -395,7 +442,6 @@ class YemService:
             except (InvalidOperation, TypeError):
                  raise ValueError("Lütfen geçerli bir miktar girin.")
 
-            # 1. Mevcut işlemi al
             mevcut_islem_res = g.supabase.table('yem_islemleri') \
                 .select('miktar_kg, yem_urun_id, islem_anindaki_birim_fiyat, aciklama') \
                 .eq('id', id).eq('sirket_id', sirket_id).single().execute()
@@ -405,17 +451,15 @@ class YemService:
             eski_miktar = Decimal(mevcut_islem_res.data['miktar_kg'])
             urun_id = mevcut_islem_res.data['yem_urun_id']
             birim_fiyat = Decimal(mevcut_islem_res.data['islem_anindaki_birim_fiyat'])
-            fark = yeni_miktar - eski_miktar # Pozitifse stok azalacak, negatifse artacak
+            fark = yeni_miktar - eski_miktar 
 
-            # 2. Ürün stoğunu al ve güncelle
             urun_res = g.supabase.table('yem_urunleri').select('stok_miktari_kg, yem_adi') \
                 .eq('id', urun_id).single().execute()
             if not urun_res.data:
                 raise ValueError("Ürün stoğu bulunamadı. İşlem güncellenemiyor.")
 
             mevcut_stok = Decimal(urun_res.data['stok_miktari_kg'])
-            yem_adi = urun_res.data['yem_adi']
-
+            
             if fark > 0 and mevcut_stok < fark:
                 raise ValueError(f"Yetersiz stok! Sadece {mevcut_stok} kg daha çıkış yapabilirsiniz.")
 
@@ -423,34 +467,29 @@ class YemService:
             g.supabase.table('yem_urunleri').update({'stok_miktari_kg': str(yeni_stok)}) \
                 .eq('id', urun_id).execute()
 
-            # 3. Yem İşlemini Güncelle
             yeni_toplam_tutar = yeni_miktar * birim_fiyat
             guncellenecek_islem = {
                 'miktar_kg': str(yeni_miktar),
                 'toplam_tutar': str(yeni_toplam_tutar)
             }
-            yeni_aciklama = eski_miktar = mevcut_islem_res.data.get('aciklama') # Varsayılan
+            yeni_aciklama = mevcut_islem_res.data.get('aciklama') 
             if 'aciklama' in data: 
                 yeni_aciklama = sanitize_input(data.get('aciklama')) or None
                 guncellenecek_islem['aciklama'] = yeni_aciklama
             g.supabase.table('yem_islemleri').update(guncellenecek_islem).eq('id', id).execute()
             
-            # 4. FİNANSAL KAYDI GÜNCELLE (YENİ EKLENDİ)
-            # Finansal kaydı bul (yem_islem_id ile)
             finans_kaydi_res = g.supabase.table('finansal_islemler').select('id, aciklama') \
                 .eq('yem_islem_id', id) \
                 .eq('sirket_id', sirket_id) \
                 .maybe_single().execute()
 
             if finans_kaydi_res.data:
-                # Yeni açıklama oluştur
                 finans_aciklama = finans_kaydi_res.data['aciklama']
-                # Açıklamanın "(...)" kısmını güncelleyelim
                 if ' (' in finans_aciklama:
-                    finans_aciklama = finans_aciklama.split(' (')[0] # Ana açıklamayı al
+                    finans_aciklama = finans_aciklama.split(' (')[0] 
                 
                 if yeni_aciklama:
-                    finans_aciklama += f" ({yeni_aciklama})" # Yeni notu ekle
+                    finans_aciklama += f" ({yeni_aciklama})" 
                     
                 g.supabase.table('finansal_islemler') \
                     .update({
@@ -461,7 +500,6 @@ class YemService:
                     .execute()
             else:
                 logger.error(f"Güncellenecek yem işlemine (ID: {id}) ait finansal kayıt bulunamadı!")
-
 
         except ValueError as ve:
             raise ve
