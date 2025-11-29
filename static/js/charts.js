@@ -1,6 +1,6 @@
 // static/js/charts.js
 
-// [ÇÖZÜM] window.charts kullanarak "already declared" hatasını ve çakışmaları engelliyoruz.
+// [ÇÖZÜM] window.charts kullanarak çakışmaları engelliyoruz.
 window.charts = {
     haftalikChart: null,
     tedarikciChart: null,
@@ -9,23 +9,21 @@ window.charts = {
     async haftalikGrafigiOlustur() {
         const loadingElement = document.getElementById('haftalik-grafik-loading');
         const toplamElement = document.getElementById('haftalik-toplam-litre');
-        const canvas = document.getElementById('haftalikRaporGrafigi');
+        const canvasId = 'haftalikRaporGrafigi';
+        let canvas = document.getElementById(canvasId);
 
-        if (!canvas) return;
+        // Canvas yoksa veya DOM'dan kaldırılmışsa işlemi durdur
+        if (!canvas || !document.body.contains(canvas)) return;
 
-        // 1. Yükleniyor animasyonunu göster
         if (loadingElement) loadingElement.style.display = 'flex';
 
         try {
             let veri = await api.fetchHaftalikOzet();
             
-            // Backend liste dönerse objeye çevir, boşsa varsayılan ata
             if (Array.isArray(veri)) {
                 veri = veri.length > 0 ? veri[0] : { labels: [], data: [] };
             }
             
-            // 2. Toplam Litreyi Hesapla ve Yazdır
-            // (Veritabanından toplam gelmese bile biz burada topluyoruz)
             let toplamLitre = 0;
             if (veri.data && Array.isArray(veri.data)) {
                 toplamLitre = veri.data.reduce((a, b) => a + (parseFloat(b) || 0), 0);
@@ -35,16 +33,14 @@ window.charts = {
                 toplamElement.textContent = toplamLitre.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' Lt';
             }
             
-            const ctx = canvas.getContext('2d');
-            
-            // Eski grafiği temizle (Hata önleyici)
-            if (this.haftalikChart) {
-                if(typeof unregisterChart === 'function') unregisterChart(this.haftalikChart);
-                this.haftalikChart.destroy();
-                this.haftalikChart = null; 
+            // GÜVENLİ TEMİZLİK: Mevcut grafiği bul ve yok et
+            const existingChart = Chart.getChart(canvas);
+            if (existingChart) {
+                existingChart.destroy();
             }
+            this.haftalikChart = null;
 
-            // Yeni Grafiği Oluştur
+            const ctx = canvas.getContext('2d');
             this.haftalikChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -53,8 +49,8 @@ window.charts = {
                         label: 'Toplanan Süt (Litre)',
                         data: veri.data || [],
                         borderWidth: 1,
-                        borderRadius: 4, // Çubuk köşelerini hafif yuvarla
-                        backgroundColor: 'rgba(59, 130, 246, 0.7)', // Brand Blue
+                        borderRadius: 4,
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
                         borderColor: 'rgba(59, 130, 246, 1)',
                         hoverBackgroundColor: 'rgba(59, 130, 246, 0.9)'
                     }]
@@ -63,15 +59,8 @@ window.charts = {
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { 
-                            beginAtZero: true,
-                            grid: { color: '#f3f4f6' }, // Hafif ızgara çizgileri
-                            ticks: { font: { size: 11 } }
-                        },
-                        x: { 
-                            grid: { display: false },
-                            ticks: { font: { size: 11 } }
-                        }
+                        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { font: { size: 11 } } },
+                        x: { grid: { display: false }, ticks: { font: { size: 11 } } }
                     },
                     plugins: {
                         legend: { display: false },
@@ -79,26 +68,18 @@ window.charts = {
                             backgroundColor: 'rgba(17, 24, 39, 0.9)',
                             padding: 10,
                             cornerRadius: 8,
-                            callbacks: { 
-                                label: (c) => ` Miktar: ${parseFloat(c.parsed.y).toLocaleString('tr-TR')} Lt` 
-                            } 
+                            callbacks: { label: (c) => ` Miktar: ${parseFloat(c.parsed.y).toLocaleString('tr-TR')} Lt` } 
                         }
                     }
                 }
             });
 
-            // Tema yöneticisine kaydet
             if(typeof registerChart === 'function') registerChart(this.haftalikChart); 
             if(typeof updateAllChartThemes === 'function') updateAllChartThemes();
 
         } catch (error) {
             console.error("Haftalık grafik hatası:", error.message);
-            if (canvas.parentNode) {
-                // Grafiğin olduğu yere hata mesajı bas (İsteğe bağlı)
-                // canvas.parentNode.innerHTML = '<div class="text-red-500 text-sm text-center py-10">Grafik yüklenemedi.</div>';
-            }
         } finally {
-            // 3. Yükleniyor animasyonunu KESİN olarak gizle
             if (loadingElement) loadingElement.style.display = 'none';
         }
     },
@@ -106,27 +87,51 @@ window.charts = {
     // --- TEDARİKÇİ DAĞILIM GRAFİĞİ ---
     async tedarikciGrafigiOlustur(period = 'monthly') { 
         const veriYokMesaji = document.getElementById('tedarikci-veri-yok');
-        const canvas = document.getElementById('tedarikciDagilimGrafigi');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
+        const canvasId = 'tedarikciDagilimGrafigi';
+        let canvas = document.getElementById(canvasId);
+        
+        // Canvas yoksa işlemi durdur
+        if (!canvas || !document.body.contains(canvas)) return;
 
-        // Eski grafiği temizle
-        if (this.tedarikciChart) {
-            if(typeof unregisterChart === 'function') unregisterChart(this.tedarikciChart);
-            this.tedarikciChart.destroy();
-            this.tedarikciChart = null;
+        // [KESİN ÇÖZÜM: HARD RESET]
+        // Eğer Chart.js instance'ı bozulmuşsa, destroy() bile hata verebilir.
+        // Bu durumda en temiz yol, canvas elementini silip yeniden oluşturmaktır.
+        const parent = canvas.parentNode;
+        const existingChart = Chart.getChart(canvas);
+
+        if (existingChart) {
+            try {
+                existingChart.destroy();
+            } catch (e) {
+                console.warn("Grafik destroy edilemedi, Canvas yenileniyor...", e);
+                // Hata durumunda Canvas'ı DOM'dan söküp yenisini takıyoruz
+                const newCanvas = document.createElement('canvas');
+                newCanvas.id = canvasId;
+                // Mevcut stil ve sınıfları kopyala
+                newCanvas.className = canvas.className;
+                newCanvas.style.cssText = canvas.style.cssText;
+                // Eski canvas'ı yenisiyle değiştir
+                parent.replaceChild(newCanvas, canvas);
+                canvas = newCanvas; // Referansı güncelle
+            }
         }
+        this.tedarikciChart = null; // Değişkeni de sıfırla
+
+        const ctx = canvas.getContext('2d');
         
         canvas.style.display = 'none';
         if (veriYokMesaji) {
-            veriYokMesaji.style.display = 'flex'; // flex ile ortala
+            veriYokMesaji.style.display = 'flex';
             veriYokMesaji.innerHTML = '<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-600"></div>';
+            veriYokMesaji.className = "absolute inset-0 flex items-center justify-center text-brand-600";
         }
 
         try {
             const veri = await api.fetchTedarikciDagilimi(period);
             
-            // Veri kontrolü
+            // Veri geldikten sonra canvas hala yerinde mi kontrol et
+            if (!document.body.contains(canvas)) return;
+
             if (!veri || !veri.labels || veri.labels.length === 0) {
                 let mesaj = 'Veri bulunamadı.';
                 if(period === 'daily') mesaj = 'Son 24 saatte veri yok.';
@@ -135,7 +140,7 @@ window.charts = {
                 
                 if (veriYokMesaji) {
                     veriYokMesaji.style.display = 'flex';
-                    veriYokMesaji.textContent = mesaj;
+                    veriYokMesaji.innerHTML = mesaj;
                     veriYokMesaji.className = "absolute inset-0 flex items-center justify-center text-gray-400 text-sm";
                 }
                 return;
@@ -144,7 +149,6 @@ window.charts = {
             const GRAFIKTE_GOSTERILECEK_SAYI = 9;
             let islenmisVeri = { labels: veri.labels, data: veri.data };
 
-            // Çok fazla veri varsa "Diğerleri" olarak birleştir
             if (veri.labels.length > GRAFIKTE_GOSTERILECEK_SAYI + 1) {
                 const digerleriToplami = veri.data.slice(GRAFIKTE_GOSTERILECEK_SAYI).reduce((a, b) => a + b, 0);
                 islenmisVeri.labels = veri.labels.slice(0, GRAFIKTE_GOSTERILECEK_SAYI);
@@ -192,9 +196,7 @@ window.charts = {
                             }
                         }
                     },
-                    layout: {
-                        padding: { left: 0, right: 0, top: 0, bottom: 0 }
-                    }
+                    layout: { padding: { left: 0, right: 0, top: 0, bottom: 0 } }
                 }
             });
 
@@ -211,14 +213,14 @@ window.charts = {
     }
 };
 
-// Olay dinleyicisi (Güvenli ekleme)
+// Olay dinleyicisi
 document.addEventListener('DOMContentLoaded', function() {
-    const filtreGrubu = document.getElementById('tedarikci-filtre-grup');
-    if (filtreGrubu) {
-        filtreGrubu.onchange = (event) => {
-            if (event.target.name === 'tedarikci-periyot' && window.charts) {
+    const filtreler = document.querySelectorAll('input[name="tedarikci-periyot"]');
+    filtreler.forEach(radio => {
+        radio.addEventListener('change', (event) => {
+            if (window.charts) {
                 window.charts.tedarikciGrafigiOlustur(event.target.value);
             }
-        };
-    }
+        });
+    });
 });

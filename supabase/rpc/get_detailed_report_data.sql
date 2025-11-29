@@ -1,3 +1,8 @@
+-- ÇAKIŞMAYI ÖNLEMEK İÇİN ESKİ VERSİYONLARI KESİN OLARAK SİLİYORUZ
+DROP FUNCTION IF EXISTS public.get_detailed_report_data(integer, text, text);
+DROP FUNCTION IF EXISTS public.get_detailed_report_data(bigint, date, date);
+DROP FUNCTION IF EXISTS public.get_detailed_report_data(integer, date, date);
+
 CREATE OR REPLACE FUNCTION get_detailed_report_data(
     p_sirket_id integer,
     p_start_date text,
@@ -13,7 +18,7 @@ DECLARE
     supplier_summary json;
     total_entry_count integer;
 BEGIN
-    -- 1. ADIM: GÜNLÜK ÖZETLERİ YENİ VE HIZLI VIEW'DAN ÇEK
+    -- 1. ADIM: GÜNLÜK ÖZETLERİ ÇEK
     WITH date_series AS (
         SELECT generate_series(p_start_date::date, p_end_date::date, '1 day'::interval) AS report_date
     )
@@ -26,12 +31,13 @@ BEGIN
         ORDER BY ds.report_date
     ) t;
 
-    -- 2. ADIM: TEDARİKÇİ DÖKÜMÜNÜ HESAPLA (Bu kısım aynı kalıyor)
+    -- 2. ADIM: TEDARİKÇİ DÖKÜMÜNÜ HESAPLA
     SELECT COALESCE(json_agg(s), '[]'::json) INTO supplier_summary FROM (
         SELECT
             t.isim AS name,
             SUM(sg.litre) AS litre,
-            COUNT(sg.id)::integer AS "entryCount"
+            -- "undefined" sorununu çözen düzeltme: entry_count
+            COUNT(sg.id)::integer AS entry_count
         FROM sut_girdileri sg
         JOIN tedarikciler t ON sg.tedarikci_id = t.id
         WHERE sg.sirket_id = p_sirket_id
@@ -40,7 +46,7 @@ BEGIN
         ORDER BY litre DESC
     ) s;
 
-    -- 3. ADIM: TOPLAM GİRDİ SAYISINI HESAPLA (Bu da aynı kalıyor)
+    -- 3. ADIM: TOPLAM GİRDİ SAYISINI HESAPLA
     SELECT COALESCE(SUM(v.girdi_sayisi), 0)::integer INTO total_entry_count
     FROM v_gunluk_sut_ozetleri v
     WHERE v.sirket_id = p_sirket_id

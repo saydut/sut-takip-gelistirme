@@ -63,32 +63,40 @@ document.addEventListener('DOMContentLoaded', function() {
         ayYilSecicileriniDoldur('rapor-ay', 'rapor-yil');
     }
 
-    // 3. Küçük Grafikleri Oluştur (window.charts kullanarak)
+    // 3. Küçük Grafikleri Oluştur
     if (typeof window.charts !== 'undefined' && typeof Chart !== 'undefined') {
+        // DOM elementlerinin varlığını kontrol et
         const haftalikCanvas = document.getElementById('haftalikRaporGrafigi');
         const tedarikciCanvas = document.getElementById('tedarikciDagilimGrafigi');
 
         if (haftalikCanvas) window.charts.haftalikGrafigiOlustur();
-        if (tedarikciCanvas) window.charts.tedarikciGrafigiOlustur();
+        if (tedarikciCanvas) window.charts.tedarikciGrafigiOlustur('monthly'); // Varsayılan ayarla başlat
     }
 
-    // 4. Radyo Buton Stilleri
+    // 4. Radyo Buton Stilleri ve Dinleyicisi (Tedarikçi Grafiği İçin)
     const filters = document.querySelectorAll('input[name="tedarikci-periyot"]');
     filters.forEach(radio => {
         radio.addEventListener('change', (e) => {
+            // Stil güncelleme
             filters.forEach(r => {
-                r.parentElement.classList.toggle('bg-white', r.checked);
-                r.parentElement.classList.toggle('text-brand-600', r.checked);
-                r.parentElement.classList.toggle('shadow-sm', r.checked);
-                r.parentElement.classList.toggle('text-gray-500', !r.checked);
+                const label = r.parentElement;
+                if (r.checked) {
+                    label.classList.add('bg-white', 'text-brand-600', 'shadow-sm');
+                    label.classList.remove('text-gray-500');
+                } else {
+                    label.classList.remove('bg-white', 'text-brand-600', 'shadow-sm');
+                    label.classList.add('text-gray-500');
+                }
             });
+
+            // Grafiği Yeniden Oluştur (charts.js içindeki fonksiyonu çağırır)
             if (typeof window.charts !== 'undefined') {
                 window.charts.tedarikciGrafigiOlustur(e.target.value);
             }
         });
     });
 
-    // 5. İlk Raporu Oluştur
+    // 5. İlk Detaylı Raporu Oluştur
     setTimeout(() => { raporOlustur(); }, 500);
 });
 
@@ -114,11 +122,15 @@ function tedarikciTablosunuDoldur(data) {
         return;
     }
     items.forEach(item => {
+        // GÜNCELLEME: Veritabanından gelen 'entry_count' alanını kullan
+        // Eski 'entryCount' gelirse diye yedekli kontrol
+        const adet = item.entry_count !== undefined ? item.entry_count : (item.entryCount !== undefined ? item.entryCount : 0);
+        
         body.innerHTML += `
         <tr class="hover:bg-gray-50 border-b border-gray-100 last:border-0">
             <td class="px-4 py-3 text-sm font-medium text-gray-900">${utils.sanitizeHTML(item.name)}</td>
             <td class="px-4 py-3 text-sm text-right font-mono text-gray-600">${parseFloat(item.litre).toFixed(2)}</td>
-            <td class="px-4 py-3 text-sm text-right text-gray-500">${item.entryCount}</td>
+            <td class="px-4 py-3 text-sm text-right text-gray-500">${adet}</td>
         </tr>`;
     });
 }
@@ -154,8 +166,14 @@ async function sutRaporuOlustur(baslangic, bitis) {
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
 
-    // [KRİTİK] Eski grafiği temizle
-    if (detayliChart) { detayliChart.destroy(); detayliChart = null; }
+    // [GÜVENLİ TEMİZLİK]
+    // Canvas üzerindeki mevcut grafiği bul ve yok et.
+    // Sadece değişkeni (detayliChart) null yapmak yetmez, Chart.js'in canvas üzerindeki bağını koparmak gerekir.
+    const existingChart = Chart.getChart(canvas);
+    if (existingChart) {
+        existingChart.destroy();
+    }
+    detayliChart = null;
 
     if(msg) { 
         msg.classList.remove('hidden'); 
@@ -171,7 +189,7 @@ async function sutRaporuOlustur(baslangic, bitis) {
                 msg.textContent = "Seçilen aralıkta veri bulunamadı.";
                 msg.className = "absolute inset-0 flex items-center justify-center text-gray-400 text-sm";
             }
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Temizlik zaten yapıldı
             if(title) title.textContent = "Rapor";
             tedarikciTablosunuDoldur([]);
             return;
