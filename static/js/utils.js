@@ -26,6 +26,8 @@ function guvenliCikis() {
 
 document.addEventListener('DOMContentLoaded', () => {
     yeniOzellikBildirimiKontrolEt();
+    // YENİ: Sürüm kontrolünü başlat
+    versiyonKontrol();
 });
 
 function yeniOzellikBildirimiKontrolEt() {
@@ -100,5 +102,65 @@ async function indirVeAc(url, buttonId, messages) {
     } finally {
         button.disabled = false;
         button.innerHTML = originalContent;
+    }
+}
+
+// --- YENİ: Zorunlu Sürüm Güncelleme Mekanizması ---
+async function versiyonKontrol() {
+    // Sadece online ise kontrol et
+    if (!navigator.onLine) return;
+
+    try {
+        // DÜZELTME: Artık herkese açık (public) endpoint kullanılıyor.
+        // Bu sayede login olmamış kullanıcılar da güncellemeyi alabilir ve 401/302 hatası oluşmaz.
+        const response = await fetch('/api/public/cache_version', { cache: "no-store" });
+        
+        // Eğer sunucu HTML dönerse (örn: hata sayfası), JSON parse hatası almamak için kontrol
+        const contentType = response.headers.get("content-type");
+        if (!response.ok || !contentType || !contentType.includes("application/json")) {
+            // Sessizce çık, log basıp kullanıcıyı rahatsız etme
+            return;
+        }
+        
+        const data = await response.json();
+        const serverVersion = parseInt(data.version);
+        
+        // Yerelde kayıtlı sürümü al (yoksa 0 varsay)
+        const localVersion = parseInt(localStorage.getItem('app_cache_version') || '0');
+
+        // Eğer sunucu sürümü daha büyükse, güncelleme var demektir
+        if (serverVersion > localVersion) {
+            console.log(`Yeni sürüm tespit edildi! (Sunucu: ${serverVersion}, Yerel: ${localVersion})`);
+            
+            // Service Worker önbelleklerini temizle
+            if ('caches' in window) {
+                const keys = await caches.keys();
+                await Promise.all(keys.map(key => caches.delete(key)));
+                console.log('Önbellekler temizlendi.');
+            }
+
+            // Yeni sürümü kaydet
+            localStorage.setItem('app_cache_version', serverVersion);
+
+            // Service Worker'ı güncelle ve sayfayı yenile
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.update();
+                }
+            }
+
+            // Kullanıcıya bilgi verip sayfayı yenile
+            if (typeof gosterMesaj === 'function') {
+                gosterMesaj('Yeni güncelleme yüklendi. Sayfa yenileniyor...', 'success', 2000);
+            }
+            
+            setTimeout(() => {
+                window.location.reload(true); // Hard reload
+            }, 1500);
+        }
+    } catch (error) {
+        // Hata olsa bile sessiz kal, kullanıcı akışını bozma
+        console.warn('Versiyon kontrolü atlandı:', error);
     }
 }

@@ -1,7 +1,7 @@
 # blueprints/main.py
 
 import os
-from flask import Blueprint, render_template, session, request, flash, redirect, url_for, Response, g
+from flask import Blueprint, render_template, session, request, flash, redirect, url_for, Response, g, jsonify
 from decorators import login_required, lisans_kontrolu
 from extensions import turkey_tz
 from datetime import datetime
@@ -91,3 +91,19 @@ def service_worker():
 
     template = render_template('service-worker.js.jinja', cache_version=version)
     return Response(template, mimetype='application/javascript')
+
+# --- YENİ: Herkese Açık Versiyon Endpoint'i ---
+@main_bp.route('/api/public/cache_version')
+def get_public_cache_version():
+    """
+    Uygulamanın önbellek sürümünü herkese açık olarak döndürür.
+    Bu sayede login sayfasındaki kullanıcılar bile güncellemeyi alabilir.
+    """
+    try:
+        # Admin servisini import etmeden doğrudan veritabanından okuyalım (döngüsel importu önlemek için)
+        response = g.supabase.table('ayarlar').select('ayar_degeri').eq('ayar_adi', 'cache_version').limit(1).single().execute()
+        version = response.data.get('ayar_degeri', '1') if response.data else '1'
+        return jsonify({"version": version})
+    except Exception:
+        # Hata durumunda varsayılan döndür
+        return jsonify({"version": "1"})
