@@ -148,27 +148,34 @@
                     </div>
                 </div>
                 
-                <div class="lg:col-span-5 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                    <div class="flex justify-between items-center mb-4">
-                        <h5 class="font-bold text-gray-800">Tedarikçi Dağılımı</h5>
-                        <div id="tedarikci-filtre-grup" class="flex bg-gray-100 rounded-lg p-1">
-                            <label class="cursor-pointer px-3 py-1 text-xs font-medium rounded-md text-gray-500 hover:bg-white hover:shadow-sm transition-all">
-                                <input type="radio" name="tedarikci-periyot" value="daily" class="hidden peer">
-                                <span class="peer-checked:text-brand-600">Gün</span>
-                            </label>
-                            <label class="cursor-pointer px-3 py-1 text-xs font-medium rounded-md text-gray-500 hover:bg-white hover:shadow-sm transition-all">
-                                <input type="radio" name="tedarikci-periyot" value="weekly" class="hidden peer">
-                                <span class="peer-checked:text-brand-600">Hafta</span>
-                            </label>
-                            <label class="cursor-pointer px-3 py-1 text-xs font-medium rounded-md bg-white text-brand-600 shadow-sm transition-all">
-                                <input type="radio" name="tedarikci-periyot" value="monthly" class="hidden peer" checked>
-                                <span class="peer-checked:text-brand-600">Ay</span>
-                            </label>
+                <!-- YENİ: 3 ADET PASTA GRAFİĞİ -->
+                <div class="lg:col-span-5 bg-white rounded-xl shadow-sm border border-gray-200 p-5 flex flex-col">
+                    <h5 class="font-bold text-gray-800 mb-4">Tedarikçi Dağılımı</h5>
+                    
+                    <div class="grid grid-cols-3 gap-2 h-full">
+                        <!-- Günlük Pasta -->
+                        <div class="flex flex-col items-center">
+                            <span class="text-xs font-semibold text-gray-500 uppercase mb-2">Bugün</span>
+                            <div class="relative w-full aspect-square">
+                                <canvas id="pastaGrafikGunluk"></canvas>
+                            </div>
                         </div>
-                    </div>
-                    <div class="relative h-64 w-full flex items-center justify-center">
-                        <canvas id="tedarikciDagilimGrafigi"></canvas>
-                        <div id="tedarikci-veri-yok" class="hidden absolute inset-0 flex items-center justify-center text-gray-400 text-sm">Veri bulunamadı</div>
+
+                        <!-- Haftalık Pasta -->
+                        <div class="flex flex-col items-center border-l border-gray-100 pl-2">
+                            <span class="text-xs font-semibold text-gray-500 uppercase mb-2">Bu Hafta</span>
+                            <div class="relative w-full aspect-square">
+                                <canvas id="pastaGrafikHaftalik"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Aylık Pasta -->
+                        <div class="flex flex-col items-center border-l border-gray-100 pl-2">
+                            <span class="text-xs font-semibold text-gray-500 uppercase mb-2">Bu Ay</span>
+                            <div class="relative w-full aspect-square">
+                                <canvas id="pastaGrafikAylik"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

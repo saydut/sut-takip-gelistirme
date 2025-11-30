@@ -92,6 +92,9 @@ if (typeof window.api === 'undefined') {
 
         // --- Rapor & Diğer ---
         fetchHaftalikOzet() { return this.request(`/api/rapor/haftalik_ozet?_t=${Date.now()}`); },
+        // YENİ: 3'lü pasta grafik verisi için
+        fetchTedarikciDagilimiCoklu() { return this.request(`/api/rapor/tedarikci_dagilimi_coklu?_t=${Date.now()}`); },
+        
         fetchTedarikciDagilimi(period) { 
             const p = period ? period : 'monthly';
             return this.request(`/api/rapor/tedarikci_dagilimi?period=${p}&_t=${Date.now()}`); 

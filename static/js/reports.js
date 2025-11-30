@@ -63,38 +63,18 @@ document.addEventListener('DOMContentLoaded', function() {
         ayYilSecicileriniDoldur('rapor-ay', 'rapor-yil');
     }
 
-    // 3. Küçük Grafikleri Oluştur
-    if (typeof window.charts !== 'undefined' && typeof Chart !== 'undefined') {
-        // DOM elementlerinin varlığını kontrol et
+    // 3. Grafikler ve Kartlar
+    if (typeof window.charts !== 'undefined') {
         const haftalikCanvas = document.getElementById('haftalikRaporGrafigi');
-        const tedarikciCanvas = document.getElementById('tedarikciDagilimGrafigi');
 
+        // Haftalık grafik (Canvas)
         if (haftalikCanvas) window.charts.haftalikGrafigiOlustur();
-        if (tedarikciCanvas) window.charts.tedarikciGrafigiOlustur('monthly'); // Varsayılan ayarla başlat
+        
+        // YENİ: 3'lü Pasta Grafiği (Eski usül ama 3 tane)
+        if (typeof window.charts.ucPastaGrafigiOlustur === 'function') {
+             window.charts.ucPastaGrafigiOlustur();
+        }
     }
-
-    // 4. Radyo Buton Stilleri ve Dinleyicisi (Tedarikçi Grafiği İçin)
-    const filters = document.querySelectorAll('input[name="tedarikci-periyot"]');
-    filters.forEach(radio => {
-        radio.addEventListener('change', (e) => {
-            // Stil güncelleme
-            filters.forEach(r => {
-                const label = r.parentElement;
-                if (r.checked) {
-                    label.classList.add('bg-white', 'text-brand-600', 'shadow-sm');
-                    label.classList.remove('text-gray-500');
-                } else {
-                    label.classList.remove('bg-white', 'text-brand-600', 'shadow-sm');
-                    label.classList.add('text-gray-500');
-                }
-            });
-
-            // Grafiği Yeniden Oluştur (charts.js içindeki fonksiyonu çağırır)
-            if (typeof window.charts !== 'undefined') {
-                window.charts.tedarikciGrafigiOlustur(e.target.value);
-            }
-        });
-    });
 
     // 5. İlk Detaylı Raporu Oluştur
     setTimeout(() => { raporOlustur(); }, 500);
@@ -122,8 +102,7 @@ function tedarikciTablosunuDoldur(data) {
         return;
     }
     items.forEach(item => {
-        // GÜNCELLEME: Veritabanından gelen 'entry_count' alanını kullan
-        // Eski 'entryCount' gelirse diye yedekli kontrol
+        // [DÜZELTME] 'entry_count' (yeni), 'entryCount' (eski) veya 0.
         const adet = item.entry_count !== undefined ? item.entry_count : (item.entryCount !== undefined ? item.entryCount : 0);
         
         body.innerHTML += `
@@ -167,11 +146,11 @@ async function sutRaporuOlustur(baslangic, bitis) {
     const ctx = canvas.getContext('2d');
 
     // [GÜVENLİ TEMİZLİK]
-    // Canvas üzerindeki mevcut grafiği bul ve yok et.
-    // Sadece değişkeni (detayliChart) null yapmak yetmez, Chart.js'in canvas üzerindeki bağını koparmak gerekir.
     const existingChart = Chart.getChart(canvas);
     if (existingChart) {
-        existingChart.destroy();
+        try {
+            existingChart.destroy();
+        } catch(e) {}
     }
     detayliChart = null;
 
@@ -189,7 +168,7 @@ async function sutRaporuOlustur(baslangic, bitis) {
                 msg.textContent = "Seçilen aralıkta veri bulunamadı.";
                 msg.className = "absolute inset-0 flex items-center justify-center text-gray-400 text-sm";
             }
-            // Temizlik zaten yapıldı
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             if(title) title.textContent = "Rapor";
             tedarikciTablosunuDoldur([]);
             return;
