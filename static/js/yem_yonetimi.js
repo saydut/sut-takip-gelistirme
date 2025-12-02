@@ -53,12 +53,12 @@ async function handleYemGirisSecimi(value) {
         const urunler = await store.getYemUrunleri();
         seciliYemGirisUrunu = urunler.find(u => u.id == value);
         if (seciliYemGirisUrunu) {
-            const varsayilanAlisFiyati = parseFloat(seciliYemGirisUrunu.birim_fiyat).toFixed(2);
+            const varsayilanAlisFiyati = parseFloat(seciliYemGirisUrunu.birim_fiyat || 0).toFixed(2);
             if(alisFiyatInput) alisFiyatInput.value = varsayilanAlisFiyati;
             
-            if (seciliYemGirisUrunu.cuval_agirligi_kg > 0) {
+            if (parseFloat(seciliYemGirisUrunu.cuval_agirligi_kg) > 0) {
                 if(cuvalGirisAlani) cuvalGirisAlani.classList.remove('hidden');
-                if(fiyatUyari) fiyatUyari.textContent = `Varsayılan çuval alış: ${parseFloat(seciliYemGirisUrunu.cuval_fiyati).toFixed(2)} TL`;
+                if(fiyatUyari) fiyatUyari.textContent = `Varsayılan çuval alış: ${parseFloat(seciliYemGirisUrunu.cuval_fiyati || 0).toFixed(2)} TL`;
             } else {
                 if(cuvalGirisAlani) cuvalGirisAlani.classList.add('hidden');
                 if(fiyatUyari) fiyatUyari.textContent = `Varsayılan KG alış: ${varsayilanAlisFiyati} TL`;
@@ -72,7 +72,7 @@ async function handleYemGirisSecimi(value) {
 }
 
 function girisKgGuncelle() {
-    if (isGirisInputUpdating || !seciliYemGirisUrunu || !seciliYemGirisUrunu.cuval_agirligi_kg) return;
+    if (isGirisInputUpdating || !seciliYemGirisUrunu || !parseFloat(seciliYemGirisUrunu.cuval_agirligi_kg)) return;
     isGirisInputUpdating = true;
     const cuval = parseFloat(document.getElementById('giris-miktar-cuval-input').value);
     if (!isNaN(cuval)) document.getElementById('giris-miktar-kg-input').value = (cuval * parseFloat(seciliYemGirisUrunu.cuval_agirligi_kg)).toFixed(2);
@@ -80,7 +80,7 @@ function girisKgGuncelle() {
 }
 
 function girisCuvalGuncelle() {
-    if (isGirisInputUpdating || !seciliYemGirisUrunu || !seciliYemGirisUrunu.cuval_agirligi_kg) return;
+    if (isGirisInputUpdating || !seciliYemGirisUrunu || !parseFloat(seciliYemGirisUrunu.cuval_agirligi_kg)) return;
     isGirisInputUpdating = true;
     const kg = parseFloat(document.getElementById('giris-miktar-kg-input').value);
     const agirlik = parseFloat(seciliYemGirisUrunu.cuval_agirligi_kg);
@@ -115,7 +115,9 @@ async function yemGirisiYap(event) {
         yemGirisSecici.clear();
         document.getElementById('cuval-giris-alani').classList.add('hidden');
         document.getElementById('giris-fiyat-uyari').textContent = '';
-        await Promise.all([yemUrunleriniYukle(mevcutYemSayfasi), yemSecicileriDoldur()]);
+        // Önce ürünleri güncelle, sonra işlemleri
+        await yemUrunleriniYukle(mevcutYemSayfasi);
+        await yemSecicileriDoldur();
     } catch (e) { gosterMesaj(e.message, 'danger'); }
     finally { btn.disabled = false; btn.innerHTML = originalText; }
 }
@@ -155,7 +157,7 @@ async function handleYemCikisSecimi(value) {
 function vadeliCuvalFiyatiniHesapla() {
     const cuvalFiyat = parseFloat(document.getElementById(VADELI_CUVAL_INPUT_ID).value);
     const kgInput = document.getElementById(BIRIM_FIYAT_INPUT_ID);
-    if (seciliYemCikisUrunu && seciliYemCikisUrunu.cuval_agirligi_kg && !isNaN(cuvalFiyat)) {
+    if (seciliYemCikisUrunu && parseFloat(seciliYemCikisUrunu.cuval_agirligi_kg) > 0 && !isNaN(cuvalFiyat)) {
         kgInput.value = (cuvalFiyat / parseFloat(seciliYemCikisUrunu.cuval_agirligi_kg)).toFixed(2);
     } else { kgInput.value = ''; }
 }
@@ -187,7 +189,7 @@ async function fiyatAlaniniYonet() {
 
     if (tip === 'pesin') {
         if(pesinDiv) pesinDiv.classList.remove('hidden');
-        if(seciliYemCikisUrunu && pesinInput) pesinInput.value = parseFloat(seciliYemCikisUrunu.satis_fiyati).toFixed(2);
+        if(seciliYemCikisUrunu && pesinInput) pesinInput.value = parseFloat(seciliYemCikisUrunu.satis_fiyati || 0).toFixed(2);
     } else {
         if(vadeliDiv) vadeliDiv.classList.remove('hidden');
         if(isCuval) { if(vadeliCuvalDiv) vadeliCuvalDiv.classList.remove('hidden'); }
@@ -196,7 +198,7 @@ async function fiyatAlaniniYonet() {
 }
 
 function cikisKgGuncelle() {
-    if (isCikisInputUpdating || !seciliYemCikisUrunu || !seciliYemCikisUrunu.cuval_agirligi_kg) return;
+    if (isCikisInputUpdating || !seciliYemCikisUrunu || !parseFloat(seciliYemCikisUrunu.cuval_agirligi_kg)) return;
     isCikisInputUpdating = true;
     const cuval = parseFloat(document.getElementById('miktar-cuval-input').value);
     if (!isNaN(cuval)) document.getElementById('miktar-kg-input').value = (cuval * parseFloat(seciliYemCikisUrunu.cuval_agirligi_kg)).toFixed(2);
@@ -204,7 +206,7 @@ function cikisKgGuncelle() {
 }
 
 function cikisCuvalGuncelle() {
-    if (isCikisInputUpdating || !seciliYemCikisUrunu || !seciliYemCikisUrunu.cuval_agirligi_kg) return;
+    if (isCikisInputUpdating || !seciliYemCikisUrunu || !parseFloat(seciliYemCikisUrunu.cuval_agirligi_kg)) return;
     isCikisInputUpdating = true;
     const kg = parseFloat(document.getElementById('miktar-kg-input').value);
     const agirlik = parseFloat(seciliYemCikisUrunu.cuval_agirligi_kg);
@@ -235,7 +237,7 @@ async function yemCikisiYap() {
     };
 
     if (!veri.tedarikci_id || !veri.yem_urun_id || !veri.miktar_kg || parseFloat(veri.miktar_kg) <= 0 || !veri.birim_fiyat) {
-        gosterMesaj('Lütfen tüm alanları doldurun.', 'warning'); return;
+        gosterMesaj('Lütfen tüm alanları doldurun. Fiyat ve miktar 0 olamaz.', 'warning'); return;
     }
 
     btn.disabled = true;
@@ -254,7 +256,10 @@ async function yemCikisiYap() {
         const res = await api.postYemIslemi(veri);
         gosterMesaj(res.message, 'success');
         formuTemizleCikis();
-        await Promise.all([yemUrunleriniYukle(mevcutYemSayfasi), yemSecicileriDoldur(), yemIslemleriniYukle(1)]);
+        // Önce ürün listesini güncelle, sonra işlemleri
+        await yemUrunleriniYukle(mevcutYemSayfasi);
+        await yemSecicileriDoldur();
+        await yemIslemleriniYukle(1);
     } catch (e) { gosterMesaj(e.message, 'danger'); }
     finally { btn.disabled = false; btn.innerHTML = originalText; }
 }
@@ -273,7 +278,7 @@ function formuTemizleCikis() {
     fiyatAlaniniYonet();
 }
 
-// --- MODAL VE YENİ ÜRÜN ---
+// --- YENİ ÜRÜN VE DÜZENLEME MODALI ---
 function yeniYemModaliniAc() {
     document.getElementById('yemUrunuModalLabel').innerText = 'Yeni Yem Ürünü';
     document.getElementById('yem-urun-form').reset();
@@ -293,14 +298,14 @@ function yemDuzenleAc(urun) {
     if (cuvalAgirligi > 0) {
         document.getElementById('fiyatlandirma-tipi-sec').value = 'cuval';
         document.getElementById('cuval-agirlik-input').value = cuvalAgirligi;
-        document.getElementById('cuval-fiyat-input').value = parseFloat(urun.cuval_fiyati).toFixed(2);
-        document.getElementById('yem-satis-cuval-fiyat-input').value = parseFloat(urun.satis_cuval_fiyati).toFixed(2);
+        document.getElementById('cuval-fiyat-input').value = parseFloat(urun.cuval_fiyati || 0).toFixed(2);
+        document.getElementById('yem-satis-cuval-fiyat-input').value = parseFloat(urun.satis_cuval_fiyati || 0).toFixed(2);
         const cuvalAdedi = parseFloat(urun.stok_miktari_kg) / cuvalAgirligi;
         stokInput.value = Number.isInteger(cuvalAdedi) ? cuvalAdedi : cuvalAdedi.toFixed(2);
     } else {
         document.getElementById('fiyatlandirma-tipi-sec').value = 'kg';
-        document.getElementById('yem-fiyat-input').value = parseFloat(urun.birim_fiyat).toFixed(2);
-        document.getElementById('yem-satis-fiyat-input').value = parseFloat(urun.satis_fiyati).toFixed(2);
+        document.getElementById('yem-fiyat-input').value = parseFloat(urun.birim_fiyat || 0).toFixed(2);
+        document.getElementById('yem-satis-fiyat-input').value = parseFloat(urun.satis_fiyati || 0).toFixed(2);
         stokInput.value = parseFloat(urun.stok_miktari_kg);
     }
     fiyatlandirmaAlanlariniYonet();
@@ -369,17 +374,6 @@ async function yemUrunuKaydet() {
     finally { btn.disabled = false; btn.innerHTML = original; }
 }
 
-async function yemIslemiGuncelle() {
-    const id = document.getElementById('edit-islem-id').value;
-    const veri = { yeni_miktar_kg: document.getElementById('edit-miktar-input').value, aciklama: document.getElementById('edit-aciklama-input').value.trim() };
-    try {
-        const res = await api.updateYemIslemi(id, veri);
-        gosterMesaj(res.message, 'success');
-        toggleModal('yemIslemDuzenleModal', false);
-        await Promise.all([yemIslemleriniYukle(mevcutIslemSayfasi), yemUrunleriniYukle(mevcutYemSayfasi), yemSecicileriDoldur()]);
-    } catch(e) { gosterMesaj(e.message, 'danger'); }
-}
-
 function yemSilmeOnayiAc(id, isim) {
     document.getElementById('silinecek-yem-id').value = id;
     document.getElementById('silinecek-yem-adi').innerText = isim;
@@ -397,11 +391,38 @@ async function yemUrunuSil() {
     } catch(e) { gosterMesaj(e.message, 'danger'); }
 }
 
-function yemIslemiDuzenleAc(id, miktar, aciklama) {
+// --- YEM İŞLEMİ (ÇIKIŞ) YÖNETİMİ ---
+
+function yemIslemiDuzenleAc(id, miktar, fiyat, aciklama) {
     document.getElementById('edit-islem-id').value = id;
     document.getElementById('edit-miktar-input').value = miktar;
+    document.getElementById('edit-fiyat-input').value = fiyat;
     document.getElementById('edit-aciklama-input').value = aciklama;
     toggleModal('yemIslemDuzenleModal', true);
+}
+
+async function yemIslemiGuncelle() {
+    const id = document.getElementById('edit-islem-id').value;
+    const veri = { 
+        yeni_miktar_kg: document.getElementById('edit-miktar-input').value, 
+        yeni_birim_fiyat: document.getElementById('edit-fiyat-input').value,
+        aciklama: document.getElementById('edit-aciklama-input').value.trim() 
+    };
+    
+    if (!veri.yeni_miktar_kg || !veri.yeni_birim_fiyat) {
+        gosterMesaj("Miktar ve Fiyat alanları boş bırakılamaz.", 'warning');
+        return;
+    }
+
+    try {
+        const res = await api.updateYemIslemi(id, veri);
+        gosterMesaj(res.message, 'success');
+        toggleModal('yemIslemDuzenleModal', false);
+        // Güncelleme sonrası sıralı yükleme: Önce ürünler, sonra işlemler
+        await yemUrunleriniYukle(mevcutYemSayfasi);
+        await yemSecicileriDoldur();
+        await yemIslemleriniYukle(mevcutIslemSayfasi);
+    } catch(e) { gosterMesaj(e.message, 'danger'); }
 }
 
 function yemIslemiSilmeOnayiAc(id) {
@@ -472,20 +493,53 @@ function renderYemUrunuAsCards(container, urunler) {
     });
 }
 
+// --- AKILLI FİYAT GÖSTERİMİ (DÜZELTİLDİ) ---
 function renderYemIslemiAsTable(container, islemler) {
     container.innerHTML = '';
     islemler.forEach(islem => {
         const tarih = new Date(islem.islem_tarihi).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' });
-        const miktar = parseFloat(islem.miktar_kg).toFixed(2);
+        
+        // NaN ve Null Koruması
+        let miktar = parseFloat(islem.miktar_kg || 0);
+        let birimFiyat = parseFloat(islem.islem_anindaki_birim_fiyat || 0);
+        let toplamTutar = parseFloat(islem.toplam_tutar || 0);
+
+        // 1. Kendi verisinden hesapla
+        if (birimFiyat === 0 && toplamTutar > 0 && miktar > 0) {
+            birimFiyat = toplamTutar / miktar;
+        } else if (toplamTutar === 0 && birimFiyat > 0 && miktar > 0) {
+            toplamTutar = miktar * birimFiyat;
+        }
+        
+        // 2. Hala 0 ise, Store'dan güncel satış fiyatını bul (AKILLI TAMAMLAMA)
+        // Dikkat: Buraya gelmesi için store.yemUrunleri'nin dolu olması gerekir.
+        if (birimFiyat === 0 && store.yemUrunleri.length > 0) {
+            const urunAdi = islem.yem_urunleri?.yem_adi || islem.yem_adi;
+            if (urunAdi) {
+                const bulunanUrun = store.yemUrunleri.find(u => u.yem_adi === urunAdi);
+                if (bulunanUrun) {
+                    birimFiyat = parseFloat(bulunanUrun.satis_fiyati || 0);
+                    if (toplamTutar === 0 && miktar > 0) {
+                        toplamTutar = miktar * birimFiyat;
+                    }
+                }
+            }
+        }
         
         container.innerHTML += `
             <tr id="yem-islem-${islem.id}" class="border-b border-gray-100 hover:bg-gray-50 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${tarih}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${utils.sanitizeHTML(islem.tedarikciler?.isim || '-')}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${utils.sanitizeHTML(islem.yem_urunleri?.yem_adi || '-')}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono text-red-600 font-bold">-${miktar} KG</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-mono text-red-600 font-bold">-${miktar.toFixed(2)} KG</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-right">
+                    <div class="flex flex-col items-end">
+                        <span class="font-bold text-gray-800">${toplamTutar.toFixed(2)} TL</span>
+                        <span class="text-xs text-gray-400">@ ${birimFiyat.toFixed(2)} TL/kg</span>
+                    </div>
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap text-center">
-                    <button onclick="yemIslemiDuzenleAc(${islem.id}, '${miktar}', '${utils.sanitizeHTML((islem.aciklama || '').replace(/'/g, "\\'"))}')" class="text-blue-600 hover:text-blue-800 mr-2"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="yemIslemiDuzenleAc(${islem.id}, '${miktar}', '${birimFiyat}', '${utils.sanitizeHTML((islem.aciklama || '').replace(/'/g, "\\'"))}')" class="text-blue-600 hover:text-blue-800 mr-2"><i class="fa-solid fa-pen"></i></button>
                     <button onclick="yemIslemiSilmeOnayiAc(${islem.id})" class="text-red-600 hover:text-red-800"><i class="fa-solid fa-xmark"></i></button>
                 </td>
             </tr>`;
@@ -496,7 +550,30 @@ function renderYemIslemiAsCards(container, islemler) {
     container.innerHTML = '';
     islemler.forEach(islem => {
         const tarih = new Date(islem.islem_tarihi).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' });
-        const miktar = parseFloat(islem.miktar_kg).toFixed(2);
+        
+        let miktar = parseFloat(islem.miktar_kg || 0);
+        let birimFiyat = parseFloat(islem.islem_anindaki_birim_fiyat || 0);
+        let toplamTutar = parseFloat(islem.toplam_tutar || 0);
+
+        if (birimFiyat === 0 && toplamTutar > 0 && miktar > 0) {
+            birimFiyat = toplamTutar / miktar;
+        } else if (toplamTutar === 0 && birimFiyat > 0 && miktar > 0) {
+            toplamTutar = miktar * birimFiyat;
+        }
+        
+        // 2. Store'dan güncel fiyatı bul
+        if (birimFiyat === 0 && store.yemUrunleri.length > 0) {
+            const urunAdi = islem.yem_urunleri?.yem_adi || islem.yem_adi;
+            if (urunAdi) {
+                const bulunanUrun = store.yemUrunleri.find(u => u.yem_adi === urunAdi);
+                if (bulunanUrun) {
+                    birimFiyat = parseFloat(bulunanUrun.satis_fiyati || 0);
+                    if (toplamTutar === 0 && miktar > 0) {
+                        toplamTutar = miktar * birimFiyat;
+                    }
+                }
+            }
+        }
 
         container.innerHTML += `
         <div class="col-span-1" id="yem-islem-${islem.id}">
@@ -507,9 +584,12 @@ function renderYemIslemiAsCards(container, islemler) {
                 </div>
                 <p class="text-sm text-gray-600 mb-2">${utils.sanitizeHTML(islem.yem_urunleri?.yem_adi || '-')}</p>
                 <div class="flex justify-between items-center pt-2 border-t border-gray-50 mt-2">
-                    <span class="text-lg font-bold text-red-600 font-mono">-${miktar} KG</span>
+                    <div class="flex flex-col">
+                        <span class="text-lg font-bold text-red-600 font-mono">-${miktar.toFixed(2)} KG</span>
+                        <span class="text-xs text-gray-500">Total: ${toplamTutar.toFixed(2)} TL (@${birimFiyat.toFixed(2)})</span>
+                    </div>
                     <div class="flex gap-2">
-                        <button onclick="yemIslemiDuzenleAc(${islem.id}, '${miktar}', '${utils.sanitizeHTML((islem.aciklama || '').replace(/'/g, "\\'"))}')" class="p-1.5 bg-gray-100 rounded text-gray-600 hover:bg-blue-50 hover:text-blue-600"><i class="fa-solid fa-pen text-xs"></i></button>
+                        <button onclick="yemIslemiDuzenleAc(${islem.id}, '${miktar}', '${birimFiyat}', '${utils.sanitizeHTML((islem.aciklama || '').replace(/'/g, "\\'"))}')" class="p-1.5 bg-gray-100 rounded text-gray-600 hover:bg-blue-50 hover:text-blue-600"><i class="fa-solid fa-pen text-xs"></i></button>
                         <button onclick="yemIslemiSilmeOnayiAc(${islem.id})" class="p-1.5 bg-red-50 rounded text-red-600 hover:bg-red-100"><i class="fa-solid fa-xmark text-xs"></i></button>
                     </div>
                 </div>
@@ -618,7 +698,7 @@ async function yemIslemleriniYukle(sayfa=1) {
     });
 }
 
-// --- YENİ EKLENEN: Yerel toggleModal fonksiyonu (Scoping sorunu çözümü için) ---
+// --- Yerel toggleModal fonksiyonu (Scoping sorunu çözümü için) ---
 function toggleModal(modalId, show) {
     const modal = document.getElementById(modalId);
     if (!modal) return;
@@ -630,7 +710,15 @@ function toggleModal(modalId, show) {
 }
 
 // === 3. DOMContentLoaded (EN SONA) ===
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+    // --- YENİ: Peşin Fiyat Kutusundaki Kilidi Kaldır ---
+    const pesinInput = document.getElementById(PESIN_FIYAT_INPUT_ID);
+    if (pesinInput) {
+        pesinInput.removeAttribute('disabled');
+        pesinInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
+    }
+    // ---------------------------------------------------
+
     tedarikciSecici = safeInitTomSelect("#tedarikci-sec", { create: false, sortField: { field: "text", direction: "asc" } });
     yemUrunSecici = safeInitTomSelect("#yem-urun-sec", { create: false, sortField: { field: "text", direction: "asc" }, onChange: handleYemCikisSecimi });
     yemGirisSecici = safeInitTomSelect("#yem-urun-giris-sec", { create: false, sortField: { field: "text", direction: "asc" }, onChange: handleYemGirisSecimi });
@@ -661,7 +749,11 @@ document.addEventListener('DOMContentLoaded', function() {
     
     tedarikcileriDoldur();
     yemSecicileriDoldur(); 
-    yemUrunleriniYukle(1);
-    yemIslemleriniYukle(1); 
+    
+    // SIRALI YÜKLEME: Önce ürünleri (fiyatlar için) sonra işlemleri yükle
+    // Bu "0 TL" sorununu çözer çünkü işlemler yüklenirken ürün fiyatı hafızada hazır olur.
+    await yemUrunleriniYukle(1);
+    await yemIslemleriniYukle(1);
+    
     fiyatAlaniniYonet();
 });
