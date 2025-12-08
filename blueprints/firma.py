@@ -66,10 +66,11 @@ def add_toplayici_api():
 @firma_yetkilisi_required
 def delete_kullanici_api(kullanici_id):
     """Bir kullanıcıyı (toplayıcı/muhasebeci/çiftçi) siler."""
-    # Bu fonksiyon aynı kalıyor (servis katmanı rol kontrolü yapıyor)
     try:
         sirket_id = session['user']['sirket_id']
-        firma_service.delete_kullanici(sirket_id, kullanici_id)
+        # DÜZELTME: Buradan sirket_id parametresini kaldırdık.
+        # Artık sadece kullanici_id gönderiyoruz çünkü servis fonksiyonu tek parametre bekliyor.
+        firma_service.delete_kullanici(kullanici_id)
         return jsonify({"message": "Kullanıcı başarıyla silindi."})
     except ValueError as ve:
         return jsonify({"error": str(ve)}), 404
@@ -80,7 +81,7 @@ def delete_kullanici_api(kullanici_id):
 # blueprints/firma.py içindeki get_kullanici_detay_api fonksiyonunu BUNUNLA DEĞİİŞTİR
 
 # Bu importun en üstte olduğundan emin ol:
-from services.tedarikci_service import tedarikci_service
+
 
 @firma_bp.route('/api/kullanici_detay/<int:kullanici_id>', methods=['GET'])
 @login_required

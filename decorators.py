@@ -10,7 +10,7 @@ def login_required(f):
         if 'user' not in session:
             # Oturum yoksa, isteğin türüne bakılmaksızın 401 Unauthorized yanıtı döndür.
             # Yanıta, istemcinin login sayfasına yönlendirme yapması gerektiğini
-            # belirten bir bayrak ekleyelim.
+            # belirten bir bayrak.
             return jsonify({
                 "error": "Bu işlemi yapmak veya sayfayı görüntülemek için giriş yapmanız gerekmektedir.",
                 "redirect_to_login": True # İstemci tarafı için bayrak

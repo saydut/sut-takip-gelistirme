@@ -1,5 +1,4 @@
-# Dosya Adı: extensions.py
-# Yapılacak: İçindeki fonksiyonu silerek bu hale getir.
+
 
 import os
 from supabase import create_client, Client
