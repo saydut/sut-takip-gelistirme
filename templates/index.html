@@ -1,3 +1,10 @@
+<!-- ===================================================================
+# File: templates/index.html  (ESKİ İÇERİK KORUNDU + Çiftçi ELSE eklendi)
+# Not: Sadece 'main' içindeki wrapper'a 'main-wrapper' sınıfı eklendi
+# ve if/else ile çiftçi partial'ı gösterildi. Modal ve script bloklarına
+# dokunulmadı.
+# Kaynak dosya: kullanıcıdan gelen orijinal index.html
+# =================================================================== -->
 {% extends "base.html" %}
 
 {% block title %}Süt Takip Paneli{% endblock %}
@@ -23,10 +30,12 @@
     </header>
 
     <main class="flex-1 overflow-y-auto bg-gray-50 p-4">
-        <div class="max-w-7xl mx-auto">
+        <!-- SADECE BU SATIRDA KÜÇÜK EKLEME: 'main-wrapper' -->
+        <div class="max-w-7xl mx-auto main-wrapper">
             <div id="alert-container" class="mb-4"></div>
 
             {% if session.get('user', {}).get('rol') != 'ciftci' %}
+            <!-- ================== ORİJİNAL NORMAL PANEL (AYNEN) ================== -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 <div class="lg:col-span-4 space-y-6 order-1">
                     <div id="veri-giris-paneli" class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -70,6 +79,9 @@
                     <nav id="girdiler-sayfalama" class="flex justify-center mt-4"></nav>
                 </div>
             </div>
+            <!-- ================== ORİJİNAL NORMAL PANEL SON ================== -->
+            {% else %}
+              {% include "_ciftci_panel.html" %}
             {% endif %}
         </div>
     </main>
@@ -91,3 +103,86 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/ciftci_panel.js') }}"></script>
 {% endblock %}
+
+<!-- ===================================================================
+# File: templates/_ciftci_panel.html  (YENİ – TAM)
+# Amaç: Çiftçi rolü için DOM iskeleti; JS’in beklediği ID’ler hazır.
+# =================================================================== -->
+<div id="ciftci-panel" class="space-y-6">
+  <!-- Özet kartları -->
+  <div id="ciftci-ozet-kartlari" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
+
+  <!-- Süt Girdilerim -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="bg-brand-50 px-4 py-3 border-b border-gray-100">
+      <h3 class="text-sm font-semibold text-gray-800"><i class="fa-solid fa-glass-water mr-2"></i>Süt Girdilerim</h3>
+    </div>
+    <div class="p-4">
+      <div id="ciftci-sut-veri-yok" class="text-center text-gray-500 hidden">Kayıt bulunamadı.</div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-gray-500">
+            <tr>
+              <th class="text-left py-2">Tarih</th>
+              <th class="text-left py-2">Tanker</th>
+              <th class="text-right py-2">Litre</th>
+              <th class="text-right py-2">Fiyat</th>
+              <th class="text-right py-2">Toplam</th>
+            </tr>
+          </thead>
+          <tbody id="ciftci-sut-tablosu" class="divide-y divide-gray-100 tabular-nums"></tbody>
+        </table>
+      </div>
+      <nav id="ciftci-sut-sayfalama" class="flex justify-center mt-4"></nav>
+    </div>
+  </div>
+
+  <!-- Yem Alımlarım -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="bg-brand-50 px-4 py-3 border-b border-gray-100">
+      <h3 class="text-sm font-semibold text-gray-800"><i class="fa-solid fa-wheat-awn mr-2"></i>Yem Alımlarım</h3>
+    </div>
+    <div class="p-4">
+      <div id="ciftci-yem-veri-yok" class="text-center text-gray-500 hidden">Kayıt bulunamadı.</div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-gray-500">
+            <tr>
+              <th class="text-left py-2">Tarih</th>
+              <th class="text-left py-2">Ürün</th>
+              <th class="text-right py-2">Miktar (KG)</th>
+              <th class="text-right py-2">Birim Fiyat</th>
+              <th class="text-right py-2">Toplam</th>
+            </tr>
+          </thead>
+          <tbody id="ciftci-yem-tablosu" class="divide-y divide-gray-100 tabular-nums"></tbody>
+        </table>
+      </div>
+      <nav id="ciftci-yem-sayfalama" class="flex justify-center mt-4"></nav>
+    </div>
+  </div>
+
+  <!-- Finans İşlemlerim -->
+  <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+    <div class="bg-brand-50 px-4 py-3 border-b border-gray-100">
+      <h3 class="text-sm font-semibold text-gray-800"><i class="fa-solid fa-wallet mr-2"></i>Finans İşlemlerim</h3>
+    </div>
+    <div class="p-4">
+      <div id="ciftci-finans-veri-yok" class="text-center text-gray-500 hidden">Kayıt bulunamadı.</div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-gray-500">
+            <tr>
+              <th class="text-left py-2">Tarih</th>
+              <th class="text-left py-2">İşlem</th>
+              <th class="text-right py-2">Tutar</th>
+              <th class="text-left py-2">Açıklama</th>
+            </tr>
+          </thead>
+          <tbody id="ciftci-finans-tablosu" class="divide-y divide-gray-100 tabular-nums"></tbody>
+        </table>
+      </div>
+      <nav id="ciftci-finans-sayfalama" class="flex justify-center mt-4"></nav>
+    </div>
+  </div>
+</div>

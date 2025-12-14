@@ -1,0 +1,88 @@
+<!-- ===============================================================
+File: templates/_ciftci_panel.html  (TAM ve EKSİKSİZ – çiftçi DOM iskeleti)
+# Not: ID'ler JS'in beklediği şekilde tutuldu.
+================================================================ -->
+<div id="ciftci-panel" class="space-y-6">
+  <!-- Özet kartları -->
+  <div id="ciftci-ozet-kartlari" class="grid grid-cols-2 md:grid-cols-5 gap-4"></div>
+
+  <!-- Süt Girdilerim -->
+  <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
+    <div class="bg-blue-50 dark:bg-slate-800 px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+      <h3 class="text-sm font-semibold text-gray-800 dark:text-slate-100">
+        <i class="fa-solid fa-glass-water mr-2"></i>Süt Girdilerim
+      </h3>
+    </div>
+    <div class="p-4">
+      <div id="ciftci-sut-veri-yok" class="text-center text-gray-500 dark:text-slate-300 hidden">Kayıt bulunamadı.</div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-gray-500 dark:text-slate-300">
+            <tr>
+              <th class="text-left py-2">Tarih</th>
+              <th class="text-left py-2">Tanker</th>
+              <th class="text-right py-2">Litre</th>
+              <th class="text-right py-2">Fiyat</th>
+              <th class="text-right py-2">Toplam</th>
+            </tr>
+          </thead>
+          <tbody id="ciftci-sut-tablosu" class="divide-y divide-gray-100 dark:divide-slate-800 tabular-nums"></tbody>
+        </table>
+      </div>
+      <nav id="ciftci-sut-sayfalama" class="flex justify-center mt-4"></nav>
+    </div>
+  </div>
+
+  <!-- Yem Alımlarım -->
+  <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
+    <div class="bg-blue-50 dark:bg-slate-800 px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+      <h3 class="text-sm font-semibold text-gray-800 dark:text-slate-100">
+        <i class="fa-solid fa-wheat-awn mr-2"></i>Yem Alımlarım
+      </h3>
+    </div>
+    <div class="p-4">
+      <div id="ciftci-yem-veri-yok" class="text-center text-gray-500 dark:text-slate-300 hidden">Kayıt bulunamadı.</div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-gray-500 dark:text-slate-300">
+            <tr>
+              <th class="text-left py-2">Tarih</th>
+              <th class="text-left py-2">Ürün</th>
+              <th class="text-right py-2">Miktar (KG)</th>
+              <th class="text-right py-2">Birim Fiyat</th>
+              <th class="text-right py-2">Toplam</th>
+            </tr>
+          </thead>
+          <tbody id="ciftci-yem-tablosu" class="divide-y divide-gray-100 dark:divide-slate-800 tabular-nums"></tbody>
+        </table>
+      </div>
+      <nav id="ciftci-yem-sayfalama" class="flex justify-center mt-4"></nav>
+    </div>
+  </div>
+
+  <!-- Finans İşlemlerim -->
+  <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-slate-800 overflow-hidden">
+    <div class="bg-blue-50 dark:bg-slate-800 px-4 py-3 border-b border-gray-100 dark:border-slate-700">
+      <h3 class="text-sm font-semibold text-gray-800 dark:text-slate-100">
+        <i class="fa-solid fa-wallet mr-2"></i>Finans İşlemlerim
+      </h3>
+    </div>
+    <div class="p-4">
+      <div id="ciftci-finans-veri-yok" class="text-center text-gray-500 dark:text-slate-300 hidden">Kayıt bulunamadı.</div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead class="text-gray-500 dark:text-slate-300">
+            <tr>
+              <th class="text-left py-2">Tarih</th>
+              <th class="text-left py-2">İşlem</th>
+              <th class="text-right py-2">Tutar</th>
+              <th class="text-left py-2">Açıklama</th>
+            </tr>
+          </thead>
+          <tbody id="ciftci-finans-tablosu" class="divide-y divide-gray-100 dark:divide-slate-800 tabular-nums"></tbody>
+        </table>
+      </div>
+      <nav id="ciftci-finans-sayfalama" class="flex justify-center mt-4"></nav>
+    </div>
+  </div>
+</div>
