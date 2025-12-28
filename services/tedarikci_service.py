@@ -270,6 +270,8 @@ class PagedDataService:
                 "toplam_yem_borcu": f"{Decimal(ozet_verisi.get('toplam_yem_borcu', 0)):.2f}",
                 "toplam_sirket_odemesi": f"{Decimal(ozet_verisi.get('toplam_sirket_odemesi', 0)):.2f}",
                 "toplam_tahsilat": f"{Decimal(ozet_verisi.get('toplam_tahsilat', 0)):.2f}",
+                "gecmis_alacak": f"{Decimal(ozet_verisi.get('gecmis_alacak', 0)):.2f}",
+                "gecmis_borc": f"{Decimal(ozet_verisi.get('gecmis_borc', 0)):.2f}",
                 "net_bakiye": f"{Decimal(ozet_verisi.get('net_bakiye', 0)):.2f}"
             }
 

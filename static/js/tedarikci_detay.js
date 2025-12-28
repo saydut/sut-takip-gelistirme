@@ -161,7 +161,9 @@ function ozetKartlariniDoldur(ozet) {
     
     const items = [
         { title: 'Toplam Süt Alacağı', val: ozet.toplam_sut_alacagi, color: 'green' },
+        { title: 'Geçmiş Alacak', val: ozet.gecmis_alacak, color: 'purple' },
         { title: 'Toplam Yem Borcu', val: ozet.toplam_yem_borcu, color: 'red' },
+        { title: 'Geçmiş Borç', val: ozet.gecmis_borc, color: 'orange' },
         { title: 'Şirketten Ödeme', val: ozet.toplam_sirket_odemesi, color: 'yellow' },
         { title: 'Tahsilat', val: ozet.toplam_tahsilat, color: 'blue' },
         { title: 'Net Bakiye', val: ozet.net_bakiye, color: 'indigo' } 
@@ -176,7 +178,9 @@ function ozetKartlariniDoldur(ozet) {
             red: 'bg-red-50 border-red-200 text-red-700',
             yellow: 'bg-yellow-50 border-yellow-200 text-yellow-700',
             blue: 'bg-blue-50 border-blue-200 text-blue-700',
-            indigo: 'bg-indigo-50 border-indigo-200 text-indigo-700'
+            indigo: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+            purple: 'bg-purple-50 border-purple-200 text-purple-700',
+            orange: 'bg-orange-50 border-orange-200 text-orange-700'
         };
         
         container.innerHTML += `
